@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    // File Layout
+    "rootDir": "src",
+    "outDir": "dist",
+
+    // Environment Settings
+    "target": "ES2020",
+    "module": "CommonJS",                 // ✅ fixed spelling & casing
+    "moduleResolution": "Node",           // ✅ resolve modules like Node.js
+    "lib": ["DOM","ES2020"],                    // ✅ modern JS features
+    "types": ["node"],                    // ✅ include Node types
+
+    // Other Outputs
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    // Strict Typechecking
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    // Style / Safety (optional toggles)
+    // "noImplicitReturns": true,
+    // "noUnusedLocals": true,
+    // "noUnusedParameters": true,
+
+    // Module Interop
+    "esModuleInterop": true,              // ✅ allows default import from CJS
+    "skipLibCheck": true,
+
+    // Removed options causing your error:
+    // "isolatedModules": true,
+    // "verbatimModuleSyntax": false,
+    // "noUncheckedSideEffectImports": true,
+    // "moduleDetection": "force"
+  }
+}
