@@ -7,7 +7,7 @@ const createWindow = (): void => {
   // Create the browser window.
   const win = new BrowserWindow({
     width: 800,
-    height: 600,
+    height: 1000,
     webPreferences: {
       // The preload script is a bridge between Node.js and the renderer's web page.
       preload: path.join(__dirname, 'preload.js'),
@@ -17,15 +17,22 @@ const createWindow = (): void => {
   // An IPC (Inter-Process Communication) handler for a 'ping' message.
   ipcMain.handle('run-command', async (_, cmd: string) => {
     return new Promise<string>((resolve, reject) => {
-      exec(cmd, (error, stdout, stderr) => {
+      // If user typed "sudo something", replace with pkexec
+      let finalCmd = cmd.trim();
+      if (finalCmd.startsWith("sudo ")) {
+        finalCmd = "pkexec " + finalCmd.slice(5); // remove "sudo " prefix
+      }
+
+      exec(finalCmd, (error, stdout, stderr) => {
         if (error) {
           reject(stderr || error.message);
         } else {
-          resolve(stdout);
+          resolve(stdout || stderr || ""); // return both stdout/stderr
         }
       });
     });
   });
+
 
   // Load the index.html file into the window.
   win.loadFile('index.html');
