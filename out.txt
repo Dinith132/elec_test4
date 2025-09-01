@@ -27,3 +27,7 @@ Connected (press CTRL+C to quit)
 < {"type": "INFO", "topic": "STEP_2_SUCCESS_AFTER_DEBUG", "message": "\u2705 Step 2 succeeded after debugging: The output is a table with the specified columns: 'Filesystem', 'Size', 'Used', 'Avail', 'Use%', and 'Mounted on'."}
 < {"type": "INFO", "topic": "SUMMARY_START", "message": "Loading summary report..."}
 < {"final_report": {"original_request": "check my ip and free space in disks", "steps_completed": [{"step": 1, "summary": "Displayed network interface information.", "outcome": "Successfully retrieved details for loopback (lo), Ethernet (eth0), and Wi-Fi (wlan0) interfaces."}, {"step": 2, "summary": "Displayed disk space usage for all mounted filesystems.", "outcome": "Successfully retrieved disk space usage for various filesystems, including root and an external drive."}], "key_results": {"ip_address": "192.168.8.107 (from wlan0 interface)", "disk_space_summary": [{"filesystem": "/dev/nvme0n1p5", "mounted_on": "/", "available": "4.4G", "used_percentage": "89%"}, {"filesystem": "/dev/sda1", "mounted_on": "/media/dinith/Academic", "available": "21G", "used_percentage": "90%"}]}, "final_outcome": "success", "warnings": ["The 'eth0' (Ethernet) interface is reported as 'DOWN' with 'NO-CARRIER', indicating it's not connected or active."]}}
+
+
+
+check what are the devices are connected to my local network

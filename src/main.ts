@@ -1,5 +1,5 @@
+// main.ts
 import { app, BrowserWindow, ipcMain } from 'electron';
-// import { exec } from 'child_process';
 import { spawn } from 'child_process';
 import * as path from 'node:path';
 
@@ -9,106 +9,104 @@ const createWindow = (): void => {
   const win = new BrowserWindow({
     width: 800,
     height: 1000,
+    transparent: true, // Enable transparency for futuristic glass effect
+    backgroundColor: '#00000000', // Fully transparent base color
     webPreferences: {
-      // The preload script is a bridge between Node.js and the renderer's web page.
       preload: path.join(__dirname, 'preload.js'),
     },
   });
 
-  // An IPC (Inter-Process Communication) handler for a 'ping' message.
-  // ipcMain.handle('run-command', async (_, cmd: string) => {
-  //   return new Promise<string>((resolve, reject) => {
-  //     // If user typed "sudo something", replace with pkexec
-  //     let finalCmd = cmd.trim();
-  //     if (finalCmd.startsWith("sudo ")) {
-  //       finalCmd = "pkexec " + finalCmd.slice(5); // remove "sudo " prefix
-  //     }
+  const userShells: Record<number, any> = {};
 
-  //     exec(finalCmd, (error, stdout, stderr) => {
-  //       if (error) {
-  //         reject(stderr || error.message);
-  //       } else {
-  //         resolve(stdout || stderr || ""); // return both stdout/stderr
-  //       }
-  //     });
-  //   });
-  // });
+  ipcMain.handle('run-command', async (event, cmd: string) => {
+    const senderId = event.sender.id;
 
+    if (!userShells[senderId]) {
+      userShells[senderId] = spawn('/bin/bash', [], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        cwd: process.env.HOME,
+        env: { ...process.env, PS1: 'PROMPT_#END#' }, // Custom prompt for detection
+      });
+    }
 
-  // let shell = spawn('bash', [], {
-  //   stdio: ['pipe', 'pipe', 'pipe']
-  // });
+    const shell = userShells[senderId];
+    let finalCmd = cmd.trim();
+    if (finalCmd.startsWith("sudo ")) {
+      finalCmd = "pkexec " + finalCmd.slice(5); // strip "sudo " prefix
+    }
 
+    return new Promise<string>((resolve) => {
+      let output = '';
+      let error = '';
+      let maxTimeout: NodeJS.Timeout | null = null;
+      let buffer = '';
 
-const userShells: Record<number, any> = {};
+      const onStdout = (data: Buffer) => {
+        const dataStr = data.toString();
+        buffer += dataStr;
+        output += dataStr;
+        event.sender.send('stream-output', { text: dataStr, isError: false });
 
+        // Check for prompt to detect command completion
+        if (buffer.includes('PROMPT_#END#')) {
+          cleanup();
+          resolve((output + error).trim());
+        }
+      };
 
-ipcMain.handle('run-command', async (event, cmd: string) => {
-  const senderId = event.sender.id;
+      const onStderr = (data: Buffer) => {
+        const dataStr = data.toString();
+        buffer += dataStr;
+        error += dataStr;
+        event.sender.send('stream-output', { text: dataStr, isError: true });
 
-  if (!userShells[senderId]) {
-    userShells[senderId] = spawn('/bin/bash', [], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: process.env.HOME,
+        // Check for prompt in stderr too (some commands write prompts here)
+        if (buffer.includes('PROMPT_#END#')) {
+          cleanup();
+          resolve((output + error).trim());
+        }
+      };
+
+      const cleanup = () => {
+        shell.stdout.off('data', onStdout);
+        shell.stderr.off('data', onStderr);
+        if (maxTimeout) clearTimeout(maxTimeout);
+        buffer = ''; // Reset buffer for next command
+      };
+
+      // Fallback: max 5 minutes to prevent hanging
+      maxTimeout = setTimeout(() => {
+        cleanup();
+        event.sender.send('stream-output', { text: 'Command timed out after 5 minutes.', isError: true });
+        resolve((output + error + '\n[ERROR: Command timed out after 5 minutes.]').trim());
+      }, 5 * 60 * 1000); // 5 minutes
+
+      shell.stdout.on('data', onStdout);
+      shell.stderr.on('data', onStderr);
+
+      // Write command and ensure prompt is triggered
+      shell.stdin.write(`${finalCmd}\necho PROMPT_#END#\n`);
     });
-  }
-
-  const shell = userShells[senderId];
-
-  let finalCmd = cmd.trim();
-  if (finalCmd.startsWith("sudo ")) {
-    finalCmd = "pkexec " + finalCmd.slice(5); // strip "sudo " prefix
-  }
-
-  return new Promise<string>((resolve) => {
-    let output = '';
-    let error = '';
-    let timeout: NodeJS.Timeout | null = null;
-
-    const flush = () => {
-      shell.stdout.off('data', onStdout);
-      shell.stderr.off('data', onStderr);
-      resolve((output + error).trim());
-    };
-
-    const onStdout = (data: Buffer) => {
-      output += data.toString();
-      resetTimer();
-    };
-
-    const onStderr = (data: Buffer) => {
-      error += data.toString();
-      resetTimer();
-    };
-
-    const resetTimer = () => {
-      if (timeout) clearTimeout(timeout);
-      // Assume command finished if no more data in 100ms
-      timeout = setTimeout(flush, 10000);
-    };
-
-    shell.stdout.on('data', onStdout);
-    shell.stderr.on('data', onStderr);
-
-    shell.stdin.write(`${finalCmd}\n`);
-    resetTimer();
   });
-});
-
-
-
 
   // Load the index.html file into the window.
   win.loadFile('index.html');
+
+  // Clean up shell on window close
+  win.on('closed', () => {
+    const senderId = win.webContents.id;
+    if (userShells[senderId]) {
+      userShells[senderId].kill();
+      delete userShells[senderId];
+    }
+  });
 };
 
 // This method is called when Electron has finished initialization
-// and is ready to create browser windows.
 app.whenReady().then(() => {
   createWindow();
 
-  // On macOS, it's common to re-create a window when the dock icon is
-  // clicked and there are no other windows open.
+  // On macOS, re-create a window when the dock icon is clicked
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -118,8 +116,6 @@ app.whenReady().then(() => {
 
 // Quit the app when all windows are closed, except on macOS.
 app.on('window-all-closed', () => {
-  // On macOS, applications and their menu bar often stay active until
-  // the user quits explicitly with Cmd + Q.
   if (process.platform !== 'darwin') {
     app.quit();
   }
