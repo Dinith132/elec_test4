@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Multi-Agent Orchestrator</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: monospace;
+      background-color: #1e1e1e;
+      color: #ccc;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    #status {
+      background-color: #111;
+      padding: 5px 10px;
+      color: #0f0;
+      font-weight: bold;
+    }
+
+    #main-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    #terminal-container {
+      flex: 2;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #444;
+      overflow: hidden;
+    }
+
+    #terminal {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      background-color: #1e1e1e;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    #plan-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      background-color: #2a2a2a;
+      overflow-y: auto;
+    }
+
+    #plan-container h3 {
+      margin-top: 0;
+      color: #fff;
+      text-align: center;
+    }
+
+    #plan-list {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    #plan-list li {
+      padding: 5px 10px;
+      margin-bottom: 5px;
+      border-radius: 4px;
+      background-color: #444;
+      color: #fff;
+      font-size: 0.9rem;
+    }
+
+    #plan-list li.pending { background-color: #555; }
+    #plan-list li.running { background-color: #0a84ff; }
+    #plan-list li.done { background-color: #28a745; }
+    #plan-list li.failed { background-color: #dc3545; }
+
+    .line {
+      margin-bottom: 4px;
+    }
+
+    .meta {
+      color: #888;
+    }
+
+    .agent { color: #ffa500; }
+    .user { color: #0ff; }
+    .exec { color: #0f0; }
+    .error { color: #f00; }
+    .summary { color: #ff69b4; }
+
+    .code {
+      background-color: #222;
+      color: #0f0;
+      padding: 5px;
+      margin-top: 2px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+
+    #input-container {
+      display: flex;
+      padding: 5px 10px;
+      background-color: #111;
+    }
+
+    #commandInput {
+      flex: 1;
+      padding: 5px 10px;
+      background-color: #222;
+      border: none;
+      color: #fff;
+      font-family: monospace;
+    }
+
+    #sendBtn, #clearBtn {
+      padding: 5px 10px;
+      margin-left: 5px;
+      background-color: #0a84ff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-family: monospace;
+    }
+
+    #sendBtn:hover, #clearBtn:hover { opacity: 0.8; }
+  </style>
+</head>
+<body>
+
+  <div id="status">Disconnected</div>
+
+  <div id="main-container">
+    <!-- Terminal Output -->
+    <div id="terminal-container">
+      <div id="terminal"></div>
+      <div id="input-container">
+        <input type="text" id="commandInput" placeholder="Enter command manually...">
+        <button id="sendBtn">Send</button>
+        <button id="clearBtn">Clear</button>
+      </div>
+    </div>
+
+    <!-- Plan / Steps List -->
+    <div id="plan-container">
+      <h3>Plan Steps</h3>
+      <ul id="plan-list"></ul>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

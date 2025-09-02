@@ -8,11 +8,11 @@ const clearBtn = document.getElementById("clearBtn") as HTMLButtonElement;
 const terminalEl = document.getElementById("terminal") as HTMLDivElement;
 const planListEl = document.getElementById("plan-list") as HTMLUListElement;
 
-// Track pending executions
-const pendingExecutions = new Map<string | null, HTMLLIElement>();
+// Track pending executions by step_id
+const pendingExecutions = new Map<string, HTMLLIElement>();
 
-function appendLine(kind: "AGENT" | "USER" | "SYSTEM" | "EXEC" | "ERROR" | "SUMMARY", text: string, codeBlock?: string) {
-  // Skip the prompt marker in output
+// Terminal append
+function appendLine(kind: string, text: string, codeBlock?: string) {
   if (text.includes('PROMPT_#END#')) return;
 
   const line = document.createElement("div");
@@ -25,7 +25,7 @@ function appendLine(kind: "AGENT" | "USER" | "SYSTEM" | "EXEC" | "ERROR" | "SUMM
 
   const tag = document.createElement("span");
   tag.textContent = `[${kind}] `;
-  tag.className = kind === "AGENT" ? "agent" : (kind === "USER" ? "user" : (kind === "EXEC" ? "exec" : (kind === "ERROR" ? "error" : "")));
+  tag.className = kind.toLowerCase();
   line.appendChild(tag);
 
   const content = document.createElement("span");
@@ -57,13 +57,14 @@ function getRunCommandFn(): ((cmd: string) => Promise<string>) | null {
   return null;
 }
 
+// Run command in local shell via Electron IPC
 const runLocalCommand = async (cmd: string): Promise<string> => {
   const fn = getRunCommandFn();
-  if (!fn) throw new Error("Local runCommand API not found in preload (window.terminal or window.appAPI.terminal).");
+  if (!fn) throw new Error("Local runCommand API not found.");
   return await fn(cmd);
 };
 
-// WebSocket connect
+// WebSocket
 let socket: WebSocket | null = null;
 
 function connectWs(url = WS_URL) {
@@ -84,91 +85,108 @@ function connectWs(url = WS_URL) {
       return;
     }
 
-    if (msg.final_report) {
-      appendLine("SUMMARY", "Final report received:");
-      appendLine("SUMMARY", JSON.stringify(msg.final_report, null, 2));
+    const type = msg.type ?? "UNKNOWN";
+    const stepId = msg.step_id ?? null;
+    const requestId = msg.request_id ?? null;
+    const data = msg.data ?? {};
+
+    // Handle plan steps
+    if (type === "PLAN_STEP" && stepId) {
+      const li = document.createElement("li");
+      li.textContent = data.description || "Unnamed step";
+      li.dataset.execId = stepId;
+      li.className = "pending";
+      planListEl.appendChild(li);
+      planListEl.scrollTop = planListEl.scrollHeight;
+      pendingExecutions.set(stepId, li);
+      appendLine("PLAN", `Step added: ${data.description}`, undefined);
       return;
     }
 
-    if (msg.type) {
-      const t = (msg.type || "").toString();
-      const topic = msg.topic ? ` (${msg.topic})` : "";
-      const messageText = msg.message ?? (msg.msg ?? "");
-      appendLine("AGENT", `${t}${topic}: ${String(messageText)}`);
+    // Handle code to execute
+    if (type === "STEP_EXECUTION_REQUEST" && stepId) {
+      const code = data.code ?? "";
+      const instructions = data.instructions ?? "";
+      appendLine("AGENT", `Execution requested for step ${stepId}:`, code);
+      if (instructions) appendLine("AGENT", `Instructions: ${instructions}`);
 
-      if (t === "EXECUTE_CODE_REQUEST" || msg.type === "EXECUTE_CODE_REQUEST") {
-        const code = msg.code ?? "";
-        const instructions = msg.instructions ?? "";
-        appendLine("AGENT", `Agent requests execution:${topic}`, code || undefined);
-        if (instructions) appendLine("AGENT", `Instructions: ${instructions}`);
+      // Auto-run the code
+      const li = pendingExecutions.get(stepId);
+      if (li) li.className = "running";
 
-        // Add to plan list
-        const requestId = msg.request_id ?? null;
-        const execId = requestId !== null ? requestId.toString() : `exec-${Date.now()}`; // String key
-        const li = document.createElement("li");
-        li.textContent = code ? `${code}` : (instructions ? `${instructions}` : "Unknown execution");
-        li.className = "pending";
-        li.dataset.execId = execId;
-        planListEl.appendChild(li);
-        planListEl.scrollTop = planListEl.scrollHeight;
-        pendingExecutions.set(execId, li);
+      try {
+        const output = await runLocalCommand(code);
+        const success = !output.includes('[ERROR: Command timed out');
+        const resultMsg = {
+          type: "EXECUTE_CODE_RESULT",
+          code,
+          output: output.replace('PROMPT_#END#', '').trim(),
+          success,
+          request_id: requestId,
+          step_id: stepId
+        };
+        socket?.send(JSON.stringify(resultMsg));
 
-        appendLine("SYSTEM", `Executing requested code locally: ${code}`);
-        try {
-          const out = await runLocalCommand(code);
-          const resultMsg = {
-            type: "EXECUTE_CODE_RESULT",
-            code,
-            output: out.replace('PROMPT_#END#', '').trim(),
-            success: !out.includes('[ERROR: Command timed out'),
-            request_id: msg.request_id ?? null
-          };
-          socket?.send(JSON.stringify(resultMsg));
-          appendLine("SYSTEM", `Sent EXECUTE_CODE_RESULT (success) back to agent.`);
-          // Mark as done
-          const execIdForSuccess = resultMsg.request_id !== null ? resultMsg.request_id.toString() : `exec-${Date.now()}`;
-          const liSuccess = pendingExecutions.get(execIdForSuccess);
-          if (liSuccess) {
-            liSuccess.className = "done";
-            liSuccess.textContent = `✔ ${liSuccess.textContent}`;
-            pendingExecutions.delete(execIdForSuccess);
-          }
-        } catch (err) {
-          const errStr = err instanceof Error ? `${err.message}` : String(err);
-          appendLine("ERROR", `Execution failed for: ${code}`);
-          appendLine("ERROR", errStr);
-          const resultMsg = {
-            type: "EXECUTE_CODE_RESULT",
-            code,
-            output: errStr,
-            success: false,
-            request_id: msg.request_id ?? null
-          };
-          try {
-            socket?.send(JSON.stringify(resultMsg));
-            appendLine("SYSTEM", `Sent EXECUTE_CODE_RESULT (failure) back to agent.`);
-            // Mark as failed
-            const execIdForFailure = resultMsg.request_id !== null ? resultMsg.request_id.toString() : `exec-${Date.now()}`;
-            const liFailure = pendingExecutions.get(execIdForFailure);
-            if (liFailure) {
-              liFailure.className = "failed";
-              liFailure.textContent = `✖ ${liFailure.textContent}`;
-              pendingExecutions.delete(execIdForFailure);
-            }
-          } catch (sendErr) {
-            appendLine("ERROR", `Failed to send execution result back: ${String(sendErr)}`);
-          }
+        appendLine("EXEC", `Execution finished for step ${stepId}`, output);
+        if (li) {
+          li.className = success ? "done" : "failed";
+          li.textContent = `${success ? "✔" : "✖"} ${li.textContent}`;
+          pendingExecutions.delete(stepId);
+        }
+      } catch (err) {
+        const errStr = err instanceof Error ? err.message : String(err);
+        appendLine("ERROR", `Execution failed for step ${stepId}: ${errStr}`);
+        const resultMsg = {
+          type: "EXECUTE_CODE_RESULT",
+          code,
+          output: errStr,
+          success: false,
+          request_id: requestId,
+          step_id: stepId
+        };
+        socket?.send(JSON.stringify(resultMsg));
+        if (li) {
+          li.className = "failed";
+          li.textContent = `✖ ${li.textContent}`;
+          pendingExecutions.delete(stepId);
         }
       }
       return;
     }
 
+    // Handle success/fail updates
+    if (type === "STEP_SUCCESS" || type === "STEP_FAIL" || type.startsWith("DEBUG")) {
+      appendLine(type, JSON.stringify(data, null, 2));
+      const li = stepId ? pendingExecutions.get(stepId) : null;
+      if (li) {
+        if (type === "STEP_SUCCESS" || type === "DEBUG_SUCCESS") {
+          li.className = "done";
+          li.textContent = `✔ ${li.textContent}`;
+          pendingExecutions.delete(stepId);
+        }
+        if (type === "STEP_FAIL" || type === "DEBUG_FAIL" || type === "DEBUG_ABORT") {
+          li.className = "failed";
+          li.textContent = `✖ ${li.textContent}`;
+          pendingExecutions.delete(stepId);
+        }
+      }
+      return;
+    }
+
+    // Summary report
+    if (type === "SUMMARY_REPORT") {
+      appendLine("SUMMARY", "Final Summary Report:");
+      appendLine("SUMMARY", JSON.stringify(data, null, 2));
+      return;
+    }
+
+    // Default log
     appendLine("AGENT", JSON.stringify(msg, null, 2));
   };
 
   socket.onerror = (e) => {
     appendLine("ERROR", `WebSocket error: ${String(e)}`);
-    statusEl.textContent = "WebSocket error (check server)";
+    statusEl.textContent = "WebSocket error";
   };
 
   socket.onclose = (ev) => {
@@ -181,33 +199,27 @@ function connectWs(url = WS_URL) {
 sendBtn.addEventListener("click", () => {
   const text = commandInput.value.trim();
   if (!text) return;
-  try {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-      appendLine("ERROR", "WebSocket is not connected. Please wait or check server.");
-      return;
-    }
-    socket.send(text);
-    appendLine("USER", text);
-    commandInput.value = "";
-  } catch (err) {
-    appendLine("ERROR", `Failed to send: ${String(err)}`);
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    appendLine("ERROR", "WebSocket is not connected.");
+    return;
   }
+  socket.send(text);
+  appendLine("USER", text);
+  commandInput.value = "";
 });
 
 commandInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    sendBtn.click();
-  }
+  if (e.key === "Enter") sendBtn.click();
 });
 
 clearBtn.addEventListener("click", () => {
   terminalEl.innerHTML = "";
   planListEl.innerHTML = "";
   pendingExecutions.clear();
-  appendLine("SYSTEM", "Cleared terminal and plan.");
+  appendLine("SYSTEM", "Terminal and plan cleared.");
 });
 
-// Set up stream output listener
+// Stream CLI output
 const w = window as any;
 if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput === "function") {
   w.appAPI.terminal.onStreamOutput((data: { text: string; isError: boolean }) => {
@@ -215,5 +227,5 @@ if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput ===
   });
 }
 
-// Start
+// Start WebSocket connection
 connectWs(WS_URL);
