@@ -5,12 +5,26 @@ declare const sendBtn: HTMLButtonElement;
 declare const clearBtn: HTMLButtonElement;
 declare const terminalEl: HTMLDivElement;
 declare const planListEl: HTMLUListElement;
+declare let socket: WebSocket | null;
+declare let currentRequestId: string | null;
+declare let currentExecutingStepId: string | null;
 declare const pendingExecutions: Map<string, HTMLLIElement>;
+declare const stepPanels: Map<string, HTMLElement>;
+declare let planningSpinnerEl: HTMLElement | null;
+declare let summarySpinnerEl: HTMLElement | null;
+declare function lockSend(lock: boolean): void;
 declare function appendLine(kind: string, text: string, codeBlock?: string): void;
 declare function tryParseJSON(s: string): any | null;
 declare function getRunCommandFn(): ((cmd: string) => Promise<string>) | null;
 declare const runLocalCommand: (cmd: string) => Promise<string>;
-declare let socket: WebSocket | null;
+declare function makeSpinner(text: string): HTMLElement;
+declare function completeSpinner(sp: HTMLElement | null, doneText?: string): void;
+declare function makeCollapsible(title: string, code?: string): {
+    root: HTMLElement;
+    body: HTMLElement;
+};
+declare function getOrCreateStepPanel(stepId: string, description?: string): HTMLElement;
+declare function setStepStatus(stepId: string, status: "pending" | "running" | "success" | "failed"): void;
 declare function connectWs(url?: string): void;
 declare const w: any;
 //# sourceMappingURL=renderer.d.ts.map

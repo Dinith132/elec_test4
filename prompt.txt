@@ -1,0 +1,394 @@
+// renderer.ts
+const WS_URL = "ws://localhost:8000/ws";
+
+const statusEl = document.getElementById("status") as HTMLDivElement;
+const commandInput = document.getElementById("commandInput") as HTMLInputElement;
+const sendBtn = document.getElementById("sendBtn") as HTMLButtonElement;
+const clearBtn = document.getElementById("clearBtn") as HTMLButtonElement;
+const terminalEl = document.getElementById("terminal") as HTMLDivElement;
+const planListEl = document.getElementById("plan-list") as HTMLUListElement;
+
+// Track pending executions by step_id
+const pendingExecutions = new Map<string, HTMLLIElement>();
+
+// Terminal append
+function appendLine(kind: string, text: string, codeBlock?: string) {
+  if (text.includes('PROMPT_#END#')) return;
+
+  const line = document.createElement("div");
+  line.className = "line";
+  const time = new Date().toLocaleTimeString();
+  const meta = document.createElement("span");
+  meta.className = "meta";
+  meta.textContent = `[${time}] `;
+  line.appendChild(meta);
+
+  const tag = document.createElement("span");
+  tag.textContent = `[${kind}] `;
+  tag.className = kind.toLowerCase();
+  line.appendChild(tag);
+
+  const content = document.createElement("span");
+  content.textContent = text;
+  line.appendChild(content);
+
+  if (codeBlock) {
+    const code = document.createElement("pre");
+    code.className = "code";
+    code.textContent = codeBlock;
+    line.appendChild(code);
+  }
+
+  terminalEl.appendChild(line);
+  terminalEl.scrollTop = terminalEl.scrollHeight;
+}
+
+// Safe JSON parse
+function tryParseJSON(s: string): any | null {
+  try { return JSON.parse(s); } catch { return null; }
+}
+
+// Locate runCommand in window
+function getRunCommandFn(): ((cmd: string) => Promise<string>) | null {
+  const w = window as any;
+  if (w.terminal && typeof w.terminal.runCommand === "function") return w.terminal.runCommand.bind(w.terminal);
+  if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.runCommand === "function") return w.appAPI.terminal.runCommand.bind(w.appAPI.terminal);
+  if (typeof w.runCommand === "function") return w.runCommand.bind(w);
+  return null;
+}
+
+// Run command in local shell via Electron IPC
+const runLocalCommand = async (cmd: string): Promise<string> => {
+  const fn = getRunCommandFn();
+  if (!fn) throw new Error("Local runCommand API not found.");
+  return await fn(cmd);
+};
+
+// WebSocket
+let socket: WebSocket | null = null;
+
+function connectWs(url = WS_URL) {
+  socket = new WebSocket(url);
+  statusEl.textContent = `Connecting to ${url}...`;
+
+  socket.onopen = () => {
+    statusEl.textContent = `Connected to agent at ${url}`;
+    appendLine("SYSTEM", `WebSocket connected to ${url}`);
+  };
+
+  socket.onmessage = async (ev: MessageEvent) => {
+    const raw = typeof ev.data === "string" ? ev.data : String(ev.data);
+    const msg = tryParseJSON(raw);
+
+    if (!msg) {
+      appendLine("AGENT", raw);
+      return;
+    }
+
+    const type = msg.type ?? "UNKNOWN";
+    const stepId = msg.step_id ?? null;
+    const requestId = msg.request_id ?? null;
+    const data = msg.data ?? {};
+
+    // Handle plan steps
+    if (type === "PLAN_STEP" && stepId) {
+      const li = document.createElement("li");
+      li.textContent = data.description || "Unnamed step";
+      li.dataset.execId = stepId;
+      li.className = "pending";
+      planListEl.appendChild(li);
+      planListEl.scrollTop = planListEl.scrollHeight;
+      pendingExecutions.set(stepId, li);
+      appendLine("PLAN", `Step added: ${data.description}`, undefined);
+      return;
+    }
+
+    // Handle code to execute
+    if (type === "STEP_EXECUTION_REQUEST" && stepId) {
+      const code = data.code ?? "";
+      const instructions = data.instructions ?? "";
+      appendLine("AGENT", `Execution requested for step ${stepId}:`, code);
+      if (instructions) appendLine("AGENT", `Instructions: ${instructions}`);
+
+      // Auto-run the code
+      const li = pendingExecutions.get(stepId);
+      if (li) li.className = "running";
+
+      try {
+        const output = await runLocalCommand(code);
+        const success = !output.includes('[ERROR: Command timed out');
+        const resultMsg = {
+          type: "EXECUTE_CODE_RESULT",
+          code,
+          output: output.replace('PROMPT_#END#', '').trim(),
+          success,
+          request_id: requestId,
+          step_id: stepId
+        };
+        socket?.send(JSON.stringify(resultMsg));
+
+        appendLine("EXEC", `Execution finished for step ${stepId}`, output);
+        if (li) {
+          li.className = success ? "done" : "failed";
+          li.textContent = `${success ? "✔" : "✖"} ${li.textContent}`;
+          pendingExecutions.delete(stepId);
+        }
+      } catch (err) {
+        const errStr = err instanceof Error ? err.message : String(err);
+        appendLine("ERROR", `Execution failed for step ${stepId}: ${errStr}`);
+        const resultMsg = {
+          type: "EXECUTE_CODE_RESULT",
+          code,
+          output: errStr,
+          success: false,
+          request_id: requestId,
+          step_id: stepId
+        };
+        socket?.send(JSON.stringify(resultMsg));
+        if (li) {
+          li.className = "failed";
+          li.textContent = `✖ ${li.textContent}`;
+          pendingExecutions.delete(stepId);
+        }
+      }
+      return;
+    }
+
+    // Handle success/fail updates
+    if (type === "STEP_SUCCESS" || type === "STEP_FAIL" || type.startsWith("DEBUG")) {
+      appendLine(type, JSON.stringify(data, null, 2));
+      const li = stepId ? pendingExecutions.get(stepId) : null;
+      if (li) {
+        if (type === "STEP_SUCCESS" || type === "DEBUG_SUCCESS") {
+          li.className = "done";
+          li.textContent = `✔ ${li.textContent}`;
+          pendingExecutions.delete(stepId);
+        }
+        if (type === "STEP_FAIL" || type === "DEBUG_FAIL" || type === "DEBUG_ABORT") {
+          li.className = "failed";
+          li.textContent = `✖ ${li.textContent}`;
+          pendingExecutions.delete(stepId);
+        }
+      }
+      return;
+    }
+
+    // Summary report
+    if (type === "SUMMARY_REPORT") {
+      appendLine("SUMMARY", "Final Summary Report:");
+      appendLine("SUMMARY", JSON.stringify(data, null, 2));
+      return;
+    }
+
+    // Default log
+    appendLine("AGENT", JSON.stringify(msg, null, 2));
+  };
+
+  socket.onerror = (e) => {
+    appendLine("ERROR", `WebSocket error: ${String(e)}`);
+    statusEl.textContent = "WebSocket error";
+  };
+
+  socket.onclose = (ev) => {
+    appendLine("SYSTEM", `WebSocket closed: code=${ev.code} reason=${ev.reason || "none"}`);
+    statusEl.textContent = "WebSocket disconnected";
+  };
+}
+
+// UI actions
+sendBtn.addEventListener("click", () => {
+  const text = commandInput.value.trim();
+  if (!text) return;
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    appendLine("ERROR", "WebSocket is not connected.");
+    return;
+  }
+  socket.send(text);
+  appendLine("USER", text);
+  commandInput.value = "";
+});
+
+commandInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendBtn.click();
+});
+
+clearBtn.addEventListener("click", () => {
+  terminalEl.innerHTML = "";
+  planListEl.innerHTML = "";
+  pendingExecutions.clear();
+  appendLine("SYSTEM", "Terminal and plan cleared.");
+});
+
+// Stream CLI output
+const w = window as any;
+if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput === "function") {
+  w.appAPI.terminal.onStreamOutput((data: { text: string; isError: boolean }) => {
+    appendLine(data.isError ? "ERROR" : "EXEC", data.text);
+  });
+}
+
+// Start WebSocket connection
+connectWs(WS_URL);
+
+this is fucking good, it working find as a pie. now look is seem ordinary, so this is the plan now, i will say how to do we have to show this, you will code it, and build my terminal like below
+
+1.first user enter the msg and this msg will show to user and this will lock the sending button until i say(in fuatur step i will say it)
+
+2. after send the it will send json ```{
+  "type": "PLAN_START",
+  "request_id": "req-001",
+  "timestamp": "2025-09-02T09:35:36.125181Z",
+  "data": {
+    "message": "Loading Planning agent request..."
+  }
+}```
+after recive this json should display somthing like showing "Loading planing agents" with loading animations
+
+3. then we will revice json like below, after recive this "PLAN_STEPS" we can stop above loading animations and make it as a complete
+{
+  "type": "PLAN_STEPS",
+  "request_id": "req-001",
+  "timestamp": "2025-09-02T09:35:52.997640Z",
+  "data": {
+    "steps": [
+      {
+        "step_id": "1",
+        "description": "Identify the primary network interface's IP address and subnet mask (CIDR) to determine the local network range."
+      },
+      {
+        "step_id": "2",
+        "description": "Use nmap to perform a ping scan on the identified local subnet, which helps populate the system's ARP cache with active host information."
+      },
+      {
+        "step_id": "3",
+        "description": "Display the Address Resolution Protocol (ARP) cache, which contains the IP-to-MAC address mappings for recently communicated devices on the local network."
+      }
+    ]
+  }
+}
+it have steps to be run, you have to show them in terminal like below
+    step_id:description
+    step_id:description
+    ...
+
+4. next we recive some json like below
+{
+  "type": "PLAN_COMPLETE",
+  "request_id": "req-001",
+  "timestamp": "2025-09-02T09:35:52.997951Z",
+  "data": {
+    "total_steps": 3
+  }
+}
+
+that say planinig is over
+
+5. next below json
+{
+  "type": "EXEC_INIT",
+  "request_id": "req-001",
+  "timestamp": "2025-09-02T09:35:52.998058Z",
+  "data": {
+    "message": "==================Executing steps====================="
+  }
+}
+
+it indicate that steps now going to execute
+
+6.next revice the step 1 start 
+{
+  "type": "STEP_START",
+  "request_id": "req-001",
+  "timestamp": "2025-09-02T09:35:52.998155Z",
+  "data": {
+    "description": "Identify the primary network interface's IP address and subnet mask (CIDR) to determine the local network range."
+  },
+  "step_id": "1"
+}
+
+this json say step x begun to process, we can show step's data.description and step id as the topic and show loading animations unitl this step is over
+
+7. next we recive json like below, that give the how the agent reson the above step, we can show it as paragraph belong to above step topic 
+{
+  "type": "STEP_REASONING",
+  "request_id": "req-001",
+  "timestamp": "2025-09-02T09:35:56.878376Z",
+  "data": {
+    "reasoning": "This command uses 'ip -o -4 addr show' to list IPv4 addresses in a concise format. It then pipes the output to 'awk' to filter for lines with 'scope global' (indicating the primary interface) and extracts the 4th field, which contains the IP address and CIDR mask. 'head -n 1' ensures only the first such address is returned."
+  },
+  "step_id": "1"
+}
+we can show data.resoning as paragraph belong to above step topic
+
+8. next we recive below json that contain the code ti be execute
+{
+  "type": "STEP_CODE",
+  "request_id": "req-001",
+  "timestamp": "2025-09-02T09:35:56.878686Z",
+  "data": {
+    "language": "bash",
+    "code": "ip -o -4 addr show | awk '/scope global/ {print $4}' | head -n 1"
+  },
+  "step_id": "1"
+}
+
+we can show this in a box that can expland or compress and that box should include data.code in given json, and we send this code to execute and results will be append to the this box iventualy it recived, after recive all output we can send output to agent again(in above code you handle it correctly)
+
+10, then again we will recive json like below that conform that above output is correct or not, 
+
+    10.1 if it correct we will recive below
+    {
+    "type": "STEP_SUCCESS",
+    "request_id": "req-001",
+    "timestamp": "2025-09-02T09:35:56.878686Z",
+    "message": "The output '192.168.144.73/24' is a single IPv4 address followed by a CIDR mask.",
+    "output": "{\"type\":\"EXECUTE_CODE_RESULT\",\"code\":\"ip -o -4 addr show | awk '/scope global/ {print $4}' | head -n 1\",\"output\":\"192.168.144.73/24\",\"success\":true,\"request_id\":\"req-001\",\"step_id\":\"1\"}"
+    }
+
+    if it success we will have to show message part in json and stop the animation we step begun(expained in step 6)
+
+    10.2 if it not correct we will recive something like below
+    {
+    "type": "STEP_FAIL",
+    "request_id": "req-001",
+    "timestamp": "2025-09-02T09:35:56.878686Z",
+    "reason": "The output contains only a single line, but the rule requires multiple lines, each showing an IP and MAC address."
+    }
+    we have to show reson part, then we reattempt to above code again like below 
+    
+        10.2.1 we reciver first 
+        {"type": "DEBUG_START", "request_id": "req-001", "timestamp": "2025-09-02T13:04:03.433313Z", "data": {"attempt": 1, "max_attempts": 2}, "step_id": "1"}
+        it mention that debug start for that perticulaer step
+
+        10.2.2 we reciver second
+        {"type": "DEBUG_REASONING", "request_id": "req-001", "timestamp": "2025-09-02T13:04:13.045401Z", "data": {"reasoning": "The original code 'mke' is correct for the step's goal of determining if the command exists. The reported user output 'smkdd' is entirely unrelated to the execution of 'mke'. This indicates an issue with how the command's output was captured or reported, not with the command itself. The fix is to re-execute the correct command and ensure the actual output is captured."}, "step_id": "1"}
+        we ahve to say the reson to fail that step
+
+        10.2.3 we reciver third
+        {"type": "DEBUG_CODE", "request_id": "req-001", "timestamp": "2025-09-02T13:04:13.045609Z", "data": {"language": "bash", "code": "mke"}, "step_id": "1"}
+        this is the code what we going to execute
+
+        10.2.4 we reciver fourth
+        {"type": "STEP_EXECUTION_REQUEST", "request_id": "req-001", "timestamp": "2025-09-02T13:04:13.045665Z", "data": {"instructions": "Please execute the code and send back the output and success status.", "code": "mke"}, "step_id": "1"}
+        this will same like above code execution part you can handle it like mention and send the result to like i said
+
+like this we have to maintaion our code steps part
+
+11.after finish all steps we recive the below 
+{"type": "SUMMARY_START", "request_id": "req-001", "timestamp": "2025-09-02T09:57:24.524464Z", "data": {"message": "Loading summary report..."}}
+that saying that they begun to load the summay, so we have to show somthing like loading animation for summary
+
+12. next we will recive this 
+{"type": "SUMMARY_REPORT", "request_id": "req-001", "timestamp": "2025-09-02T09:57:27.884859Z", "data": {"original_request": "pwd", "steps_completed": [{"step": "Execute the 'pwd' command.", "outcome": "The current working directory was displayed as /home/dinith."}], "key_results": ["Current working directory: /home/dinith"], "final_outcome": "success", "warnings": []}}
+this is the summery we got and we show key_results list
+
+13.then got below
+{"type": "REQUEST_COMPLETE", "request_id": "req-001", "timestamp": "2025-09-02T09:57:27.885086Z", "data": {"status": "finished"}}
+that saying our work is done and we can stop the loading things in summery
+
+14. finaly we recive this
+{"__END__": "__END__"}
+this will indicated that officialy the work is done, we can release our send button and go back to normal mode
+
+OK people this is it lets start to cording, before that you should know that my given code is correct and it will handle code execution instantly showing what recive via terminal, send all output once to agent, so if you want you can prefer them
+good luck, god bless you

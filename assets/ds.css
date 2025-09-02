@@ -1,141 +1,97 @@
-/* Futuristic terminal styling */
+/* Reset and basics */
 body {
-  font-family: 'Courier New', Courier, monospace;
-  color: #00ff00; /* Neon green text */
-  background: rgba(10, 10, 20, 0.7); /* Semi-transparent dark background */
-  backdrop-filter: blur(5px); /* Blur for glass effect (cross-platform fallback: none) */
   margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f6fa;
+  color: #333;
+}
+
+header {
+  background: #2c3e50;
+  color: #fff;
+  padding: 15px;
+  text-align: center;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+footer {
+  background: #2c3e50;
+  color: #fff;
   padding: 10px;
-  height: 100vh;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+/* Dashboard Layout */
+.dashboard {
+  display: flex;
+  height: calc(100vh - 120px);
+  padding: 10px;
+  gap: 15px;
+}
+
+.column {
+  flex: 1;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
-}
-
-#status {
-  text-align: center;
-  color: #00bfff; /* Neon blue for status */
-  margin-bottom: 10px;
-}
-
-.main-container {
-  display: flex;
-  flex: 1;
   overflow: hidden;
-  border: 1px solid rgba(0, 255, 0, 0.2); /* Subtle neon border */
-  background: rgba(0, 0, 0, 0.3); /* Extra depth */
 }
 
-.terminal-section {
-  flex: 3;
-  overflow: auto;
+.column h2 {
+  margin: 0;
   padding: 10px;
+  background: #ecf0f1;
+  border-bottom: 1px solid #dcdde1;
+  font-size: 1.2rem;
+  text-align: center;
 }
 
-#terminal {
-  white-space: pre-wrap;
-  word-wrap: break-word;
+.content {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  font-size: 0.95rem;
+  line-height: 1.4;
 }
 
-.line {
+/* Styling for dynamic logs */
+.plan-step {
+  padding: 6px 8px;
   margin-bottom: 5px;
-  animation: fadeIn 0.5s ease-in-out; /* Smooth fade for terminal output */
+  background: #dff9fb;
+  border-left: 4px solid #22a6b3;
+  border-radius: 4px;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.execution-log {
+  padding: 6px 8px;
+  margin-bottom: 5px;
+  background: #f6e58d;
+  border-left: 4px solid #f0932b;
+  border-radius: 4px;
+  font-family: monospace;
 }
 
-.meta { color: #808080; } /* Timestamp gray */
-.agent { color: #00bfff; } /* Blue for agent */
-.user { color: #ffff00; } /* Yellow for user */
-.exec { color: #00ff00; } /* Green for exec */
-.error { color: #ff0000; } /* Red for errors */
-.summary { color: #ff00ff; } /* Magenta for summaries */
-.code { background: rgba(0, 0, 0, 0.5); color: #ffffff; padding: 5px; border: 1px solid #00ff00; }
+.execution-log.success {
+  background: #badc58;
+  border-left-color: #6ab04c;
+}
 
-.plan-section {
-  flex: 1;
-  border-left: 1px solid rgba(0, 255, 0, 0.2);
+.execution-log.fail {
+  background: #ff7979;
+  border-left-color: #eb4d4b;
+}
+
+.summary-report {
   padding: 10px;
-  overflow: auto;
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.plan-section h3 {
-  color: #00bfff;
-  margin-top: 0;
-}
-
-#plan-list {
-  list-style: none;
-  padding: 0;
-}
-
-#plan-list li {
-  margin-bottom: 10px;
-  padding: 5px;
-  border-radius: 5px;
-  animation: slideIn 0.3s ease-out; /* Slide-in for adding to plan */
-  transition: color 0.5s, background 0.5s; /* Smooth completion transition */
-}
-
-@keyframes slideIn {
-  from { transform: translateX(-20px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-#plan-list li.pending {
-  color: #ffff00; /* Yellow for pending */
-  background: rgba(255, 255, 0, 0.1);
-}
-
-#plan-list li.done {
-  color: #00ff00; /* Green for success */
-  background: rgba(0, 255, 0, 0.1);
-}
-
-#plan-list li.done::before {
-  content: '\2714 '; /* Checkmark */
-  animation: checkAppear 0.5s;
-}
-
-#plan-list li.failed {
-  color: #ff0000; /* Red for failure */
-  background: rgba(255, 0, 0, 0.1);
-}
-
-#plan-list li.failed::before {
-  content: '\2716 '; /* Cross */
-  animation: checkAppear 0.5s;
-}
-
-@keyframes checkAppear {
-  from { opacity: 0; transform: scale(0.5); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.input-section {
-  display: flex;
-  margin-top: 10px;
-}
-
-#commandInput {
-  flex: 1;
-  background: rgba(0, 0, 0, 0.5);
-  color: #00ff00;
-  border: 1px solid #00ff00;
-  padding: 5px;
-}
-
-button {
-  background: rgba(0, 255, 0, 0.2);
-  color: #00ff00;
-  border: 1px solid #00ff00;
-  margin-left: 5px;
-  cursor: pointer;
-}
-
-button:hover {
-  background: rgba(0, 255, 0, 0.4);
+  background: #c7ecee;
+  border-radius: 6px;
+  font-weight: bold;
 }
