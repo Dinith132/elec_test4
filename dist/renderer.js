@@ -33,16 +33,16 @@ function appendLine(kind, text, codeBlock) {
     const tag = document.createElement("span");
     tag.textContent = `[${kind}] `;
     tag.className = kind.toLowerCase();
-    line.appendChild(tag);
+    // line.appendChild(tag);
     const content = document.createElement("span");
     content.textContent = text;
     line.appendChild(content);
-    if (codeBlock) {
-        const code = document.createElement("pre");
-        code.className = "code";
-        code.textContent = codeBlock;
-        line.appendChild(code);
-    }
+    // if (codeBlock) {
+    //   const code = document.createElement("pre");
+    //   code.className = "code";
+    //   code.textContent = codeBlock;
+    //   line.appendChild(code);
+    // }
     terminalEl.appendChild(line);
     terminalEl.scrollTop = terminalEl.scrollHeight;
 }
@@ -148,13 +148,13 @@ function getOrCreateStepPanel(stepId, description) {
     codeWrap.className = "step-code-wrap";
     const outputWrap = document.createElement("div");
     outputWrap.className = "step-output-wrap";
-    const outTitle = document.createElement("div");
-    outTitle.className = "section-title";
-    outTitle.textContent = "Output (live)";
+    // const outTitle = document.createElement("div");
+    // outTitle.className = "section-title";
+    // outTitle.textContent = "Output (live)";
     const outPre = document.createElement("pre");
     outPre.className = "code";
     outPre.dataset.stepOutput = stepId;
-    outputWrap.appendChild(outTitle);
+    // outputWrap.appendChild(outTitle);
     outputWrap.appendChild(outPre);
     body.appendChild(reasoningBlock);
     body.appendChild(codeWrap);
@@ -190,7 +190,7 @@ function connectWs(url = WS_URL) {
     statusEl.textContent = `Connecting to ${url}...`;
     socket.onopen = () => {
         statusEl.textContent = `Connected to agent at ${url}`;
-        appendLine("SYSTEM", `WebSocket connected to ${url}`);
+        // appendLine("SYSTEM", `WebSocket connected to ${url}`); 
     };
     socket.onmessage = async (ev) => {
         const raw = typeof ev.data === "string" ? ev.data : String(ev.data);
@@ -204,7 +204,7 @@ function connectWs(url = WS_URL) {
         }
         const msg = tryParseJSON(raw);
         if (!msg) {
-            appendLine("AGENT", raw);
+            appendLine("AGENT_test", raw);
             return;
         }
         const type = msg.type ?? "UNKNOWN";
@@ -220,14 +220,14 @@ function connectWs(url = WS_URL) {
             planningSpinnerEl = makeSpinner("Loading planning agent...");
             terminalEl.appendChild(planningSpinnerEl);
             terminalEl.scrollTop = terminalEl.scrollHeight;
-            appendLine("PLAN", "Planning started.");
+            // appendLine("PLAN", "Planning started.");
             return;
         }
         // 3) PLAN_STEPS → complete planning spinner; print steps as "step_id: description"
         if (type === "PLAN_STEPS") {
-            completeSpinner(planningSpinnerEl, "Planning ready");
+            completeSpinner(planningSpinnerEl, "Loaded the Planning Agent");
             const steps = (data.steps ?? []);
-            appendLine("PLAN", "Plan received:");
+            appendLine("PLAN", "Execution Plan");
             for (const s of steps) {
                 // terminal list
                 appendLine("PLAN", `${s.step_id}: ${s.description}`);
@@ -255,12 +255,12 @@ function connectWs(url = WS_URL) {
         // 6) STEP_START → create panel, mark running
         if (type === "STEP_START" && stepId) {
             const desc = data.description || "";
+            // appendLine("AGENT", `Step ${stepId} started: ${desc}`);
             const panel = getOrCreateStepPanel(stepId, desc);
             setStepStatus(stepId, "running");
             const li = pendingExecutions.get(stepId);
             if (li)
                 li.className = "running";
-            appendLine("AGENT", `Step ${stepId} started: ${desc}`);
             return;
         }
         // 7) STEP_REASONING → show paragraph in panel
@@ -280,7 +280,7 @@ function connectWs(url = WS_URL) {
             const codeWrap = panel.querySelector(".step-code-wrap");
             codeWrap.innerHTML = "";
             const code = (data.code ?? "").toString();
-            const { root, body } = makeCollapsible("Code to execute (click to expand/collapse)", code);
+            const { root, body } = makeCollapsible("Code to execute", code);
             body.classList.add("collapsed"); // start collapsed
             codeWrap.appendChild(root);
             terminalEl.scrollTop = terminalEl.scrollHeight;
@@ -305,14 +305,14 @@ function connectWs(url = WS_URL) {
             const panel = getOrCreateStepPanel(stepId);
             const outPre = panel.querySelector(`pre.code[data-step-output="${stepId}"]`);
             const code = (data.code ?? "").toString();
-            appendLine("AGENT", `Execution requested for step ${stepId}:`, code);
+            // appendLine("AGENT", `Execution requested for step ${stepId}:`, code);
             try {
                 const output = await runLocalCommand(code);
                 const cleaned = output.replace("PROMPT_#END#", "").trim();
                 const success = !output.includes("[ERROR: Command timed out");
                 // also append the final output into the step output box if exists
                 if (outPre) {
-                    outPre.textContent += (outPre.textContent ? "\n" : "") + cleaned;
+                    outPre.textContent += (outPre.textContent ? "\n" : "");
                 }
                 const resultMsg = {
                     type: "EXECUTE_CODE_RESULT",
@@ -323,7 +323,7 @@ function connectWs(url = WS_URL) {
                     step_id: stepId
                 };
                 socket?.send(JSON.stringify(resultMsg));
-                appendLine("EXEC", `Execution finished for step ${stepId}`);
+                // appendLine("EXEC", `Execution finished for step ${stepId}`);
                 if (li) {
                     li.className = success ? "done" : "failed";
                     li.textContent = `${success ? "✔" : "✖"} ${li.textContent}`;
@@ -368,8 +368,7 @@ function connectWs(url = WS_URL) {
                 }
             }
             appendLine(isSuccess ? "SUCCESS" : "ERROR", message);
-            if (reasonOrOut)
-                appendLine("AGENT", reasonOrOut);
+            // if (reasonOrOut) appendLine("AGENT", reasonOrOut);
             return;
         }
         // 10.2) DEBUG_* cycle
@@ -437,11 +436,11 @@ function connectWs(url = WS_URL) {
         // 13) REQUEST_COMPLETE → stop summary loading
         if (type === "REQUEST_COMPLETE") {
             completeSpinner(summarySpinnerEl, "Finished");
-            appendLine("SYSTEM", `Request ${requestId || ""} complete.`);
+            // appendLine("SYSTEM", `Request ${requestId || ""} complete.`);
             return;
         }
         // default: dump
-        appendLine("AGENT", JSON.stringify(msg, null, 2));
+        // appendLine("AGENT", JSON.stringify(msg, null, 2));
     };
     socket.onerror = (e) => {
         appendLine("ERROR", `WebSocket error: ${String(e)}`);
@@ -464,7 +463,8 @@ sendBtn.addEventListener("click", () => {
         return;
     }
     // 1) user enters message → show and lock until __END__
-    appendLine("USER", text);
+    const text_fix = ">> " + text;
+    appendLine("USER", text_fix);
     socket.send(text);
     commandInput.value = "";
     lockSend(true);
