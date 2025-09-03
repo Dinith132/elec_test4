@@ -362,7 +362,7 @@ function connectWs(url = WS_URL) {
         };
         socket?.send(JSON.stringify(resultMsg));
 
-        // appendLine("EXEC", `Execution finished for step ${stepId}`);
+        appendLine("EXEC", `Execution finished for step ${stepId}`);
 
         if (li) {
           li.className = success ? "done" : "failed";
@@ -535,7 +535,7 @@ clearBtn.addEventListener("click", () => {
 const w = window as any;
 if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput === "function") {
   w.appAPI.terminal.onStreamOutput((data: { text: string; isError: boolean }) => {
-    appendLine(data.isError ? "ERROR" : "EXEC", data.text);
+    // appendLine(data.isError ? "ERROR" : "EXEC", data.text);
     if (currentExecutingStepId) {
       const panel = stepPanels.get(currentExecutingStepId);
       const outPre = panel?.querySelector(`pre.code[data-step-output="${currentExecutingStepId}"]`) as HTMLPreElement | null;
