@@ -1,180 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Multi-Agent Orchestrator</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: "JetBrains Mono", monospace;
-      background-color: #0d0d0d;
-      color: #e0e0e0;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-
-    /* Status bar at top */
-    #status {
-      background-color: #111;
-      padding: 6px 12px;
-      color: #0f0;
-      font-weight: bold;
-      border-bottom: 1px solid #222;
-      font-size: 0.9rem;
-    }
-
-    #main-container {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    /* Terminal container */
-    #terminal-container {
-      flex: 2;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    /* Warp-like terminal */
-    #terminal {
-      background: #1e1e2e;
-      color: #e0e0e0;
-      font-family: monospace;
-      padding: 12px;
-      height: 100vh;
-      overflow-y: auto;
-    }
-
-    /* Terminal blocks (like Warp) */
-    .block {
-        margin-bottom: 10px;
-        padding: 10px;
-        border-left: 3px solid #8be9fd;
-        background: #2e2e3e;
-        border-radius: 6px;
-    }
-
-    .block .meta {
-      font-size: 0.75rem;
-      color: #0a84ff;
-      margin-bottom: 4px;
-      display: block;
-    }
-
-    .block.agent { border-left: 3px solid #ffa500; }
-    .block.user { border-left: 3px solid #0ff; }
-    .block.exec { border-left: 3px solid #0f0; }
-    .block.error { border-left: 3px solid #f33; }
-    .block.summary { border-left: 3px solid #ff69b4; }
-
-    .block pre {
-      margin: 8px 0 0 0;
-      padding: 8px;
-      background-color: #111;
-      border-radius: 4px;
-      overflow-x: auto;
-      color: #0f0;
-      font-size: 0.9rem;
-    }
-
-    /* Plan sidebar */
-    #plan-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background-color: #151515;
-      overflow-y: auto;
-      border-left: 1px solid #222;
-    }
-
-    #plan-container h3 {
-      margin: 10px 0;
-      color: #fff;
-      text-align: center;
-      font-size: 1rem;
-      border-bottom: 1px solid #333;
-      padding-bottom: 5px;
-    }
-
-    #plan-list {
-      list-style-type: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    #plan-list li {
-      padding: 8px 12px;
-      margin: 6px 10px;
-      border-radius: 6px;
-      background-color: #222;
-      font-size: 0.85rem;
-      color: #eee;
-      transition: all 0.2s;
-    }
-
-    #plan-list li.pending { background-color: #444; }
-    #plan-list li.running { background-color: #0a84ff; }
-    #plan-list li.done { background-color: #28a745; }
-    #plan-list li.failed { background-color: #dc3545; }
-
-    /* Input bar */
-    #input-container {
-      display: flex;
-      padding: 8px;
-      background-color: #111;
-      border-top: 1px solid #222;
-    }
-
-    #commandInput {
-      flex: 1;
-      padding: 6px 10px;
-      background-color: #000;
-      border: 1px solid #333;
-      border-radius: 4px;
-      color: #fff;
-      font-family: monospace;
-    }
-
-    #sendBtn, #clearBtn {
-      padding: 6px 12px;
-      margin-left: 6px;
-      background-color: #0a84ff;
-      border-radius: 4px;
-      border: none;
-      color: #fff;
-      font-family: monospace;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-
-    #sendBtn:hover, #clearBtn:hover { opacity: 0.85; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Terminal Agent</title>
+    <link rel="stylesheet" href="../assets/ds.css">
 </head>
 <body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div class="app-title">
+                    <span class="ai-icon">🤖</span>
+                    <span class="title-text">AI Terminal Agent</span>
+                </div>
+                <div id="status" class="status">Initializing...</div>
+            </div>
+            <div class="header-right">
+                <button id="connectBtn" class="connect-btn">Reconnect</button>
+                <button id="clearBtn" class="clear-btn">Clear</button>
+            </div>
+        </div>
 
-  <div id="status">Disconnected</div>
+        <!-- Main content -->
+        <div class="main-content">
+            <!-- Left panel: terminal -->
+            <div class="terminal-panel">
+                <div class="terminal-header">
+                    <span class="terminal-title">Terminal Output</span>
+                    <div class="terminal-controls">
+                        <span class="control-dot red"></span>
+                        <span class="control-dot yellow"></span>
+                        <span class="control-dot green"></span>
+                    </div>
+                </div>
+                <div id="terminal" class="terminal-content"></div>
+            </div>
 
-  <div id="main-container">
-    <!-- Terminal Output -->
-    <div id="terminal-container">
-      <div id="terminal"></div>
-      <div id="input-container">
-        <input type="text" id="commandInput" placeholder="Enter command...">
-        <button id="sendBtn">Send</button>
-        <button id="clearBtn">Clear</button>
-      </div>
+            <!-- Right panel: execution plan -->
+            <div class="plan-panel">
+                <div class="plan-header">
+                    <span class="plan-title">Execution Plan</span>
+                </div>
+                <div class="plan-content">
+                    <ul id="plan-list" class="plan-list"></ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input panel -->
+        <div class="input-panel">
+            <div class="input-container">
+                <input 
+                    id="commandInput" 
+                    type="text" 
+                    placeholder="Ask the AI agent to help you with any task..."
+                    class="command-input"
+                >
+                <button id="sendBtn" class="send-btn">
+                    <span class="send-icon">→</span>
+                    Send
+                </button>
+            </div>
+        </div>
     </div>
 
-    <!-- Plan / Steps -->
-    <div id="plan-container">
-      <h3>Execution Plan</h3>
-      <ul id="plan-list"></ul>
-    </div>
-  </div>
-
-  <script src="renderer.js"></script>
+    <script src="renderer.js"></script>
 </body>
 </html>

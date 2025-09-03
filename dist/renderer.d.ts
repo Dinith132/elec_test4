@@ -27,4 +27,5 @@ declare function getOrCreateStepPanel(stepId: string, description?: string): HTM
 declare function setStepStatus(stepId: string, status: "pending" | "running" | "success" | "failed"): void;
 declare function connectWs(url?: string): void;
 declare const w: any;
+declare const connectBtn: HTMLButtonElement;
 //# sourceMappingURL=renderer.d.ts.map

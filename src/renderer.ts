@@ -167,13 +167,9 @@ function getOrCreateStepPanel(stepId: string, description?: string): HTMLElement
 
   const outputWrap = document.createElement("div");
   outputWrap.className = "step-output-wrap";
-  // const outTitle = document.createElement("div");
-  // outTitle.className = "section-title";
-  // outTitle.textContent = "Output (live)";
   const outPre = document.createElement("pre");
   outPre.className = "code";
   outPre.dataset.stepOutput = stepId;
-  // outputWrap.appendChild(outTitle);
   outputWrap.appendChild(outPre);
 
   body.appendChild(reasoningBlock);
@@ -214,7 +210,7 @@ function connectWs(url = WS_URL) {
 
   socket.onopen = () => {
     statusEl.textContent = `Connected to agent at ${url}`;
-    // appendLine("SYSTEM", `WebSocket connected to ${url}`); 
+    appendLine("SYSTEM", `AI Agent connected and ready`); 
   };
 
   socket.onmessage = async (ev: MessageEvent) => {
@@ -230,7 +226,7 @@ function connectWs(url = WS_URL) {
     }
 
     const msg = tryParseJSON(raw);
-    if (!msg) { appendLine("AGENT_test", raw); return; }
+    if (!msg) { appendLine("AGENT", raw); return; }
 
     const type = msg.type ?? "UNKNOWN";
     const stepId = msg.step_id ?? null;
@@ -240,22 +236,19 @@ function connectWs(url = WS_URL) {
     // keep request id
     if (requestId && !currentRequestId) currentRequestId = requestId;
 
-    // 1) user locked earlier when sending (see send handler)
-
     // 2) PLAN_START → show planning spinner
     if (type === "PLAN_START") {
-      planningSpinnerEl = makeSpinner("Loading planning agent...");
+      planningSpinnerEl = makeSpinner("Analyzing request and creating execution plan...");
       terminalEl.appendChild(planningSpinnerEl);
       terminalEl.scrollTop = terminalEl.scrollHeight;
-      // appendLine("PLAN", "Planning started.");
       return;
     }
 
     // 3) PLAN_STEPS → complete planning spinner; print steps as "step_id: description"
     if (type === "PLAN_STEPS") {
-      completeSpinner(planningSpinnerEl, "Loaded the Planning Agent");
+      completeSpinner(planningSpinnerEl, "Plan created successfully");
       const steps = (data.steps ?? []) as Array<{ step_id: string; description: string }>;
-      appendLine("PLAN", "Execution Plan");
+      appendLine("PLAN", "Execution Plan Generated");
       for (const s of steps) {
         // terminal list
         appendLine("PLAN", `${s.step_id}: ${s.description}`);
@@ -286,7 +279,6 @@ function connectWs(url = WS_URL) {
     // 6) STEP_START → create panel, mark running
     if (type === "STEP_START" && stepId) {
       const desc = data.description || "";
-      // appendLine("AGENT", `Step ${stepId} started: ${desc}`);
       const panel = getOrCreateStepPanel(stepId, desc);
       setStepStatus(stepId, "running");
       const li = pendingExecutions.get(stepId);
@@ -340,7 +332,6 @@ function connectWs(url = WS_URL) {
       const outPre = panel.querySelector(`pre.code[data-step-output="${stepId}"]`) as HTMLPreElement | null;
 
       const code = (data.code ?? "").toString();
-      // appendLine("AGENT", `Execution requested for step ${stepId}:`, code);
 
       try {
         const output = await runLocalCommand(code);
@@ -349,7 +340,7 @@ function connectWs(url = WS_URL) {
 
         // also append the final output into the step output box if exists
         if (outPre) {
-          outPre.textContent += (outPre.textContent ? "\n" : "") ;
+          outPre.textContent += (outPre.textContent ? "\n" : "") + cleaned;
         }
 
         const resultMsg = {
@@ -362,7 +353,7 @@ function connectWs(url = WS_URL) {
         };
         socket?.send(JSON.stringify(resultMsg));
 
-        appendLine("EXEC", `Execution finished for step ${stepId}`);
+        appendLine("EXEC", `Step ${stepId} completed successfully`);
 
         if (li) {
           li.className = success ? "done" : "failed";
@@ -409,7 +400,6 @@ function connectWs(url = WS_URL) {
       }
 
       appendLine(isSuccess ? "SUCCESS" : "ERROR", message);
-      // if (reasonOrOut) appendLine("AGENT", reasonOrOut);
       return;
     }
 
@@ -480,7 +470,6 @@ function connectWs(url = WS_URL) {
     // 13) REQUEST_COMPLETE → stop summary loading
     if (type === "REQUEST_COMPLETE") {
       completeSpinner(summarySpinnerEl, "Finished");
-      // appendLine("SYSTEM", `Request ${requestId || ""} complete.`);
       return;
     }
 
@@ -490,13 +479,13 @@ function connectWs(url = WS_URL) {
 
   socket.onerror = (e) => {
     appendLine("ERROR", `WebSocket error: ${String(e)}`);
-    statusEl.textContent = "WebSocket error";
+    statusEl.textContent = "WebSocket error - Check if AI agent server is running";
     lockSend(false);
   };
 
   socket.onclose = (ev) => {
-    appendLine("SYSTEM", `WebSocket closed: code=${ev.code} reason=${ev.reason || "none"}`);
-    statusEl.textContent = "WebSocket disconnected";
+    appendLine("SYSTEM", `Connection closed: ${ev.reason || "Disconnected from AI agent"}`);
+    statusEl.textContent = "Disconnected - Click connect to retry";
     lockSend(false);
   };
 }
@@ -506,11 +495,11 @@ sendBtn.addEventListener("click", () => {
   const text = commandInput.value.trim();
   if (!text) return;
   if (!socket || socket.readyState !== WebSocket.OPEN) {
-    appendLine("ERROR", "WebSocket is not connected.");
+    appendLine("ERROR", "WebSocket is not connected to AI agent.");
     return;
   }
-  // 1) user enters message → show and lock until __END__
-  const text_fix=">> "+text;
+  
+  const text_fix = ">> " + text;
   appendLine("USER", text_fix);
   socket.send(text);
   commandInput.value = "";
@@ -535,7 +524,6 @@ clearBtn.addEventListener("click", () => {
 const w = window as any;
 if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput === "function") {
   w.appAPI.terminal.onStreamOutput((data: { text: string; isError: boolean }) => {
-    // appendLine(data.isError ? "ERROR" : "EXEC", data.text);
     if (currentExecutingStepId) {
       const panel = stepPanels.get(currentExecutingStepId);
       const outPre = panel?.querySelector(`pre.code[data-step-output="${currentExecutingStepId}"]`) as HTMLPreElement | null;
@@ -546,37 +534,14 @@ if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput ===
   });
 }
 
+// Add connection retry button
+const connectBtn = document.getElementById("connectBtn") as HTMLButtonElement;
+connectBtn?.addEventListener("click", () => {
+  if (socket && socket.readyState !== WebSocket.CLOSED) {
+    socket.close();
+  }
+  connectWs(WS_URL);
+});
+
 // ---- start ----
 connectWs(WS_URL);
-
-/* ---------- OPTIONAL CSS (put in your stylesheet) ----------
-.spinner { display: inline-flex; align-items: center; opacity: 0.9; }
-.spinner-dot { animation: blink 1s infinite; }
-.spinner-done .spinner-dot { animation: none; opacity: 0.4; }
-.spinner-text { font-style: italic; }
-@keyframes blink { 0% { opacity: 0.1; } 50% { opacity: 1; } 100% { opacity: 0.1; } }
-
-.step-panel { border: 1px solid #444; border-radius: 6px; padding: 8px; margin: 8px 0; background: #232323; }
-.step-header { display: flex; align-items: center; gap: 8px; }
-.status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.status-pending { background: #777; }
-.status-running { background: #0a84ff; }
-.status-success { background: #28a745; }
-.status-failed { background: #dc3545; }
-.step-title { font-weight: bold; }
-
-.section-title { font-weight: bold; margin: 6px 0; }
-
-.collapsible { margin-top: 6px; border: 1px solid #555; border-radius: 6px; }
-.collapsible-header { padding: 6px; cursor: pointer; user-select: none; display: flex; justify-content: space-between; }
-.collapsible-body { padding: 6px; }
-.collapsible-body.collapsed { display: none; }
-.chevron { opacity: 0.7; }
-
-.code { background-color: #222; color: #0f0; padding: 6px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; }
-
-.plan-list .pending { background: #555; }
-.plan-list .running { background: #0a84ff; }
-.plan-list .done { background: #28a745; }
-.plan-list .failed { background: #dc3545; }
---------------------------------------------------------------*/
