@@ -1,0 +1,210 @@
+I want to build an Electron-based terminal application with the following detailed requirements. The goal is a futuristic, highly interactive, “Warp/Hyperland”-style terminal with AI-powered planning and execution, smooth animations, and excellent UX. Please carefully follow all specifications.
+
+1️⃣ General Theme & Appearance
+
+Dark, futuristic, “Hyperland”/Warp-style aesthetic (like Warp terminal).
+
+Terminal-like interface, but not a plain black/white terminal.
+
+Smooth animations everywhere: fading, sliding, blinking spinners, collapsible expansions.
+
+Proper spacing between:
+
+Individual user requests
+
+Execution plans
+
+Code steps & outputs
+
+Summaries
+
+Title bar like MacOS with custom window controls.
+
+Support for dark/light toggle in settings.
+
+Use modern icons for:
+
+Settings, expand/collapse, step status (pending, running, success, failed), checkmarks, errors
+
+Nice font & line height for readability.
+
+Terminal background with subtle gradient or texture, not flat black.
+
+2️⃣ Terminal Behavior & Input
+
+Working directory visible in the prompt, like a real shell:
+
+Example: /home/dinith/projects $
+
+Updates automatically if commands change directories.
+
+User input line behaves like a terminal:
+
+Enter command/request
+
+Send button disabled while a request is running
+
+Input locked until workflow finishes
+
+Smooth output streaming:
+
+Line-by-line or character-by-character “typewriter” effect for startup info, reasoning, and command output
+
+Streaming from executed commands should append live
+
+3️⃣ Startup & System Info
+
+On start, run fastfetch or similar system info command.
+
+Display system info slowly with typewriter animation, properly formatted.
+
+Initial current directory should be captured and displayed in the prompt.
+
+Fix formatting issues so output aligns visually and is readable.
+
+4️⃣ Plan Sidebar / Execution Plan
+
+Right-side plan panel:
+
+Expandable/minimizable
+
+Shows AI-generated steps
+
+Each step displays:
+
+Step ID + description
+
+Status indicator (pending, running, success, failed)
+
+Highlighted while running
+
+Sidebar should scroll independently if too long.
+
+Loading animations:
+
+Spinner during plan creation
+
+Completed spinner when plan is ready
+
+5️⃣ Steps Panel / Execution Details
+
+Each step has a collapsible panel:
+
+Header: Step number + description, status dot, running spinner
+
+Body contains:
+
+Reasoning / explanation paragraph(s)
+
+Collapsible code block (fold/unfold, show actual code)
+
+Output streaming box (live output, fold/unfold)
+
+Step body scrolls automatically with output
+
+Smooth animations for spinners, collapsing, new lines, completion
+
+6️⃣ Code Execution & Streaming
+
+AI can request code execution:
+
+Run command locally
+
+Stream output line-by-line into step panel
+
+Update current directory automatically if command changes it
+
+Step execution locks user input until finished
+
+Update plan sidebar status (running → success/failure)
+
+Show checkmark/cross icons on step completion
+
+7️⃣ Summary
+
+After all steps:
+
+Spinner for generating summary
+
+Display key results nicely formatted
+
+Collapsible if too long
+
+Smooth animation into terminal
+
+Clearly separated from steps and previous requests
+
+8️⃣ Terminal Utilities & Extras
+
+Clear button clears terminal and plan panel while maintaining smooth UX
+
+Support multiple user requests sequentially, visually separated
+
+Settings icon allows:
+
+Dark/light mode toggle
+
+Font size & spacing adjustments
+
+Optional icons for collapsible sections (arrow chevron, plus/minus, etc.)
+
+9️⃣ Animations & UX Enhancements
+
+Typewriter effect for:
+
+Fastfetch/system info
+
+AI reasoning output
+
+Code output streaming
+
+Spinner animations for:
+
+Planning, step execution, summary generation
+
+Smooth fade-in / slide-in effects for:
+
+New request, new steps, collapsible code/output boxes
+
+Highlight currently executing step in both sidebar & terminal panel
+
+Transitions for expand/collapse actions
+
+🔟 Additional UX Ideas
+
+Hover effects on steps in sidebar to preview reasoning/code
+
+Optional search/filter in plan sidebar
+
+Timestamps for each step/output
+
+Support rich terminal output (colored text, icons, warnings/errors)
+
+Persistent history of previous requests
+
+Smooth scroll-to-latest with animation
+
+Custom fonts & ligatures for code readability
+
+Optional background blur behind collapsible panels for depth
+
+1️⃣1️⃣ Additional Startup & Directory Requirements
+
+Fastfetch/System Info Display Fix:
+
+Correctly formatted on startup (no jumbled lines)
+
+Animated/typewriter display for readability
+
+Current Directory Display Fix:
+
+Show in prompt line at all times
+
+Updates dynamically if commands change directory
+
+Mimics real terminal prompt /home/user/projects $, not raw command output
+
+✅ Goal Summary:
+The app should feel like a modern, highly interactive terminal with AI-powered planning & execution. Smooth animations, visually appealing design, clear separation of requests, live streaming outputs, collapsible code/output panels, and proper handling of startup info and current directory are critical. UX should be intuitive, polished, and futuristic.
+
+for this i have renderer.ts, main.ts, preload.ts, you can use them to get idea what i am tring to do. and main, preload logic are coorect, render also have more good logic, so be carefull when change in files

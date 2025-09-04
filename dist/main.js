@@ -53,10 +53,10 @@ const createWindow = () => {
     electron_1.ipcMain.handle('run-command', async (event, cmd) => {
         const senderId = event.sender.id;
         if (!userShells[senderId]) {
-            userShells[senderId] = (0, child_process_1.spawn)('/bin/bash', [], {
+            userShells[senderId] = (0, child_process_1.spawn)('/bin/zsh', [], {
                 stdio: ['pipe', 'pipe', 'pipe'],
                 cwd: process.env.HOME,
-                env: { ...process.env, PS1: 'PROMPT_#END#' }, // Custom prompt for detection
+                env: { ...process.env, PS1: 'PROMPT_#END# ' }, // Custom prompt for detection
             });
         }
         const shell = userShells[senderId];
@@ -71,6 +71,9 @@ const createWindow = () => {
             let buffer = '';
             const onStdout = (data) => {
                 const dataStr = data.toString();
+                console.log("....................................");
+                console.log(dataStr);
+                console.log("....................................");
                 buffer += dataStr;
                 output += dataStr;
                 event.sender.send('stream-output', { text: dataStr, isError: false });
@@ -107,7 +110,7 @@ const createWindow = () => {
             shell.stdout.on('data', onStdout);
             shell.stderr.on('data', onStderr);
             // Write command and ensure prompt is triggered
-            shell.stdin.write(`${finalCmd}\necho PROMPT_#END#\n`);
+            shell.stdin.write(`${finalCmd}\necho _CURRENT_DIR:$PWD; echo PROMPT_#END#\n`);
         });
     });
     // Load the index.html file into the window.

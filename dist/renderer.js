@@ -11,6 +11,7 @@ const planListEl = document.getElementById("plan-list");
 let socket = null;
 let currentRequestId = null;
 let currentExecutingStepId = null;
+let currentDir = "";
 const pendingExecutions = new Map(); // plan list items by step_id
 const stepPanels = new Map(); // per-step UI panels
 let planningSpinnerEl = null;
@@ -119,14 +120,21 @@ function makeCollapsible(title, code) {
     root.appendChild(body);
     return { root, body };
 }
-// create/get a panel for a step
-function getOrCreateStepPanel(stepId, description) {
-    let panel = stepPanels.get(stepId);
-    if (panel)
-        return panel;
-    panel = document.createElement("div");
+function getOrCreateStepPanel(requestId, stepId, description) {
+    // Ensure requestId has its own map
+    if (!stepPanels.has(requestId)) {
+        stepPanels.set(requestId, new Map());
+    }
+    const requestPanels = stepPanels.get(requestId);
+    // Reuse existing panel if already created
+    if (requestPanels.has(stepId)) {
+        return requestPanels.get(stepId);
+    }
+    // Create new panel
+    const panel = document.createElement("div");
     panel.className = "step-panel";
     panel.dataset.stepId = stepId;
+    panel.dataset.requestId = requestId;
     const header = document.createElement("div");
     header.className = "step-header";
     const statusDot = document.createElement("span");
@@ -150,21 +158,22 @@ function getOrCreateStepPanel(stepId, description) {
     outputWrap.className = "step-output-wrap";
     const outPre = document.createElement("pre");
     outPre.className = "code";
-    outPre.dataset.stepOutput = stepId;
+    outPre.dataset.stepOutput = `${requestId}:${stepId}`;
     outputWrap.appendChild(outPre);
     body.appendChild(reasoningBlock);
     body.appendChild(codeWrap);
     body.appendChild(outputWrap);
     panel.appendChild(header);
     panel.appendChild(body);
-    // insert panel at bottom of terminal (so user sees context)
+    // Insert into terminal (scroll to bottom)
     terminalEl.appendChild(panel);
     terminalEl.scrollTop = terminalEl.scrollHeight;
-    stepPanels.set(stepId, panel);
+    // Save in nested map
+    requestPanels.set(stepId, panel);
     return panel;
 }
-function setStepStatus(stepId, status) {
-    const panel = stepPanels.get(stepId);
+function setStepStatus(requestId, stepId, status) {
+    const panel = stepPanels.get(requestId)?.get(stepId);
     if (!panel)
         return;
     const dot = panel.querySelector(".status-dot");
@@ -174,10 +183,29 @@ function setStepStatus(stepId, status) {
         dot.classList.add(`status-${status}`);
     }
     if (spinner) {
-        if (status === "running")
-            spinner.classList.remove("spinner-done");
-        else
-            completeSpinner(spinner, status === "success" ? "Done" : status === "failed" ? "Failed" : undefined);
+        if (status === "running" || status === "pending") {
+            spinner?.classList.remove("spinner-done");
+        }
+        else {
+            completeSpinner(spinner, status === "success" ? "Done" :
+                status === "failed" ? "Failed" : undefined);
+        }
+    }
+}
+async function showStartupInfo() {
+    try {
+        // Run fastfetch/neofetch or any command that prints system info
+        const output = await runLocalCommand("fastfetch"); // use --stdout for pure text
+        const lines = output.split("\n");
+        // Append each line to terminal
+        for (const line of lines) {
+            if (line.trim())
+                appendLine("SYSTEM", line);
+        }
+    }
+    catch (err) {
+        const errStr = err instanceof Error ? err.message : String(err);
+        appendLine("ERROR", `Failed to run startup info: ${errStr}`);
     }
 }
 // ---- WebSocket ----
@@ -185,8 +213,21 @@ function connectWs(url = WS_URL) {
     socket = new WebSocket(url);
     statusEl.textContent = `Connecting to ${url}...`;
     socket.onopen = () => {
-        statusEl.textContent = `Connected to agent at ${url}`;
+        statusEl.textContent = `Connected to agent at ${WS_URL}`;
         appendLine("SYSTEM", `AI Agent connected and ready`);
+        // 1️⃣ Show startup info
+        showStartupInfo().then(async () => {
+            // 2️⃣ Get initial current directory after startup info
+            const initialOutput = await runLocalCommand("");
+            const lines = initialOutput.split("\n");
+            for (const line of lines) {
+                if (line.startsWith("CurntDIR=") || line.startsWith("_CURRENT_DIR:")) {
+                    currentDir = line.replace("CurntDIR=", "").replace("_CURRENT_DIR:", "").trim();
+                    break;
+                }
+            }
+            appendLine("PROMPT", `${currentDir} $`);
+        });
     };
     socket.onmessage = async (ev) => {
         const raw = typeof ev.data === "string" ? ev.data : String(ev.data);
@@ -208,8 +249,8 @@ function connectWs(url = WS_URL) {
         const requestId = msg.request_id ?? null;
         const data = msg.data ?? {};
         // keep request id
-        if (requestId && !currentRequestId)
-            currentRequestId = requestId;
+        // if (requestId && !currentRequestId) 
+        currentRequestId = requestId;
         // 2) PLAN_START → show planning spinner
         if (type === "PLAN_START") {
             planningSpinnerEl = makeSpinner("Analyzing request and creating execution plan...");
@@ -249,8 +290,8 @@ function connectWs(url = WS_URL) {
         // 6) STEP_START → create panel, mark running
         if (type === "STEP_START" && stepId) {
             const desc = data.description || "";
-            const panel = getOrCreateStepPanel(stepId, desc);
-            setStepStatus(stepId, "running");
+            const panel = getOrCreateStepPanel(requestId, stepId, desc);
+            setStepStatus(requestId, stepId, "running");
             const li = pendingExecutions.get(stepId);
             if (li)
                 li.className = "running";
@@ -258,7 +299,7 @@ function connectWs(url = WS_URL) {
         }
         // 7) STEP_REASONING → show paragraph in panel
         if (type === "STEP_REASONING" && stepId) {
-            const panel = getOrCreateStepPanel(stepId);
+            const panel = getOrCreateStepPanel(requestId, stepId);
             const reason = (data.reasoning ?? data.reason ?? "").toString();
             const block = panel.querySelector(".step-reasoning");
             const p = document.createElement("p");
@@ -269,7 +310,7 @@ function connectWs(url = WS_URL) {
         }
         // 8) STEP_CODE → collapsible code box (expandable)
         if (type === "STEP_CODE" && stepId) {
-            const panel = getOrCreateStepPanel(stepId);
+            const panel = getOrCreateStepPanel(requestId, stepId);
             const codeWrap = panel.querySelector(".step-code-wrap");
             codeWrap.innerHTML = "";
             const code = (data.code ?? "").toString();
@@ -281,8 +322,8 @@ function connectWs(url = WS_URL) {
         }
         // 8.5) In case the backend sends STEP_EXECUTION_RESULT (optional display)
         if (type === "STEP_EXECUTION_RESULT" && stepId) {
-            const panel = getOrCreateStepPanel(stepId);
-            const outPre = panel.querySelector(`pre.code[data-step-output="${stepId}"]`);
+            const panel = getOrCreateStepPanel(requestId, stepId);
+            const outPre = panel.querySelector(`pre.code[data-step-output="${requestId}:${stepId}"]`);
             if (outPre) {
                 const out = (data.output ?? "").toString();
                 outPre.textContent += (outPre.textContent ? "\n" : "") + out;
@@ -295,16 +336,33 @@ function connectWs(url = WS_URL) {
             const li = pendingExecutions.get(stepId);
             if (li)
                 li.className = "running";
-            const panel = getOrCreateStepPanel(stepId);
-            const outPre = panel.querySelector(`pre.code[data-step-output="${stepId}"]`);
+            const panel = getOrCreateStepPanel(requestId, stepId);
+            const outPre = panel.querySelector(`pre.code[data-step-output="${requestId}:${stepId}"]`);
             const code = (data.code ?? "").toString();
             try {
                 const output = await runLocalCommand(code);
-                const cleaned = output.replace("PROMPT_#END#", "").trim();
+                // Split output into lines
+                const lines = output.split("\n");
+                // Remove the last two lines if they match the patterns we expect
+                while (lines.length) {
+                    const lastLine = lines[lines.length - 1]?.trim() ?? "";
+                    if (lastLine === "PROMPT_#END#") {
+                        lines.pop();
+                    }
+                    else if (lastLine.startsWith("_CURRENT_DIR:")) {
+                        currentDir = lastLine.replace("_CURRENT_DIR:", "").trim(); // save current dir
+                        lines.pop();
+                    }
+                    else {
+                        break;
+                    }
+                }
+                const cleaned = lines.join("\n").trim();
+                // const cleaned = output.replace("PROMPT_#END#", "").trim();
                 const success = !output.includes("[ERROR: Command timed out");
                 // also append the final output into the step output box if exists
                 if (outPre) {
-                    outPre.textContent += (outPre.textContent ? "\n" : "") + cleaned;
+                    outPre.textContent += (outPre.textContent ? "\n" : "");
                 }
                 const resultMsg = {
                     type: "EXECUTE_CODE_RESULT",
@@ -351,7 +409,7 @@ function connectWs(url = WS_URL) {
             const message = (data.message ?? msg.message ?? (isSuccess ? "Step succeeded." : "Step failed.")).toString();
             const reasonOrOut = (data.reason ?? msg.reason ?? data.output ?? msg.output ?? "").toString();
             if (stepId) {
-                setStepStatus(stepId, isSuccess ? "success" : "failed");
+                setStepStatus(requestId, stepId, isSuccess ? "success" : "failed");
                 const li = pendingExecutions.get(stepId);
                 if (li) {
                     li.className = isSuccess ? "done" : "failed";
@@ -367,12 +425,12 @@ function connectWs(url = WS_URL) {
             const attempt = data.attempt ?? 1;
             const max = data.max_attempts ?? 2;
             appendLine("DEBUG", `Debugging step ${stepId} (attempt ${attempt}/${max})`);
-            setStepStatus(stepId, "running");
+            setStepStatus(requestId, stepId, "running");
             return;
         }
         if (type === "DEBUG_REASONING" && stepId) {
             const reason = (data.reasoning ?? "").toString();
-            const panel = getOrCreateStepPanel(stepId);
+            const panel = getOrCreateStepPanel(requestId, stepId);
             const p = document.createElement("p");
             p.className = "debug-reason";
             p.textContent = `Debug: ${reason}`;
@@ -381,7 +439,7 @@ function connectWs(url = WS_URL) {
         }
         if (type === "DEBUG_CODE" && stepId) {
             const code = (data.code ?? "").toString();
-            const panel = getOrCreateStepPanel(stepId);
+            const panel = getOrCreateStepPanel(requestId, stepId);
             const wrap = panel.querySelector(".step-code-wrap");
             // append another collapsible for debug fix
             const { root } = makeCollapsible("Debug code (click to expand/collapse)", code);
@@ -390,9 +448,9 @@ function connectWs(url = WS_URL) {
         }
         if ((type === "DEBUG_SUCCESS" || type === "DEBUG_FAIL" || type === "DEBUG_ABORT") && stepId) {
             if (type === "DEBUG_SUCCESS")
-                setStepStatus(stepId, "success");
+                setStepStatus(requestId, stepId, "success");
             if (type === "DEBUG_FAIL" || type === "DEBUG_ABORT")
-                setStepStatus(stepId, "failed");
+                setStepStatus(requestId, stepId, "failed");
             appendLine("DEBUG", `${type}: ${JSON.stringify(data)}`);
             const li = pendingExecutions.get(stepId);
             if (li) {
@@ -475,11 +533,39 @@ clearBtn.addEventListener("click", () => {
 const w = window;
 if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput === "function") {
     w.appAPI.terminal.onStreamOutput((data) => {
-        if (currentExecutingStepId) {
-            const panel = stepPanels.get(currentExecutingStepId);
-            const outPre = panel?.querySelector(`pre.code[data-step-output="${currentExecutingStepId}"]`);
+        if (currentRequestId && currentExecutingStepId) {
+            const panel = stepPanels.get(currentRequestId)?.get(currentExecutingStepId);
+            const outPre = panel?.querySelector(`pre.code[data-step-output="${currentRequestId}:${currentExecutingStepId}"]`);
             if (outPre) {
-                outPre.textContent += data.text.replace("PROMPT_#END#", "");
+                const lines = data.text.split("\n");
+                // console.log("======================")
+                // console.log(lines)
+                // console.log("======================")
+                // Remove any trailing lines that are PROMPT_#END# or _CURRENT_DIR:<dir>
+                while (lines.length) {
+                    const lastLine = lines[lines.length - 1];
+                    const last = lastLine !== undefined ? lastLine.trim() : "";
+                    // console.log("*******************************")
+                    // console.log(last)
+                    if (last === "PROMPT_#END#") {
+                        lines.pop();
+                    }
+                    else if (last.startsWith("_CURRENT_DIR:")) {
+                        currentDir = last.replace("_CURRENT_DIR:", "").trim(); // save current dir
+                        lines.pop();
+                    }
+                    else if (last === "") {
+                        lines.pop();
+                    }
+                    else {
+                        break;
+                    }
+                    // console.log("*******************************")
+                }
+                console.log("000000000000000000000000000");
+                console.log(currentDir);
+                console.log("000000000000000000000000000");
+                outPre.textContent += lines.join("\n");
             }
         }
     });

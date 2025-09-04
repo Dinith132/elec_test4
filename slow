@@ -1,0 +1,538 @@
+[4mFASTFETCH[24m(1)                                    FASTFETCH                                   [4mFASTFETCH[24m(1)
+
+[1mNAME[0m
+       fastfetch - A fast and feature-rich system information tool similar to neofetch
+
+[1mSYNOPSIS[0m
+       [1mfastfetch [22m[[4mOPTIONS[24m...]
+
+[1mDESCRIPTION[0m
+       Fastfetch  is  a tool for displaying system information in a visually appealing way. Written pri‐
+       marily in C, it focuses on performance and customizability while providing functionality  similar
+       to neofetch.  It supports Linux, Android, FreeBSD, macOS, and Windows 7 or newer.
+
+[1mCONFIGURATION[0m
+   [1mFetch Structure[0m
+       The  structure  defines  which  modules to display and in what order. It consists of module names
+       separated by colons (:).  For example: [1mtitle:separator:os:kernel:uptime[0m
+
+       To list all available modules, use [1m--list-modules[0m
+
+   [1mConfig Files[0m
+       Fastfetch uses JSONC (JSON with Comments) for configuration files.  These  files  must  have  the
+       .jsonc extension.
+
+       You  can  generate a default config file using [1m--gen-config[22m. By default, the config file is saved
+       at [1m~/.config/fastfetch/config.jsonc[22m.
+
+       The configuration/preset files are searched in the following locations (in order):
+
+       [1m1. [22mRelative to the current working directory
+
+       [1m2. [22mRelative to ~/.local/share/fastfetch/presets/
+
+       [1m3. [22mRelative to /usr/share/fastfetch/presets/
+
+       For  detailed  information  on  logo  options,  module  configuration,  and  formatting,   visit:
+       [1mhttps://github.com/fastfetch-cli/fastfetch/wiki/Configuration[0m
+
+       Fastfetch provides several built-in presets. List them with [1m--list-presets[22m.
+
+   [1mJSON Schema[0m
+       A  JSON  schema is available for editor intelligence when editing the configuration file. Add the
+       following line at the beginning of your config file:
+
+       [1m"$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json"[0m
+
+[1mOPTIONS[0m
+       Options are parsed in a case-insensitive manner. For example,  [1m--logo-type  [22mand  [1m--LOGO-TYPE  [22mare
+       treated identically.
+
+       Arguments  in  square  brackets  are  optional. Optional boolean arguments default to 'true' when
+       specified without a value.
+
+       For more detailed information about a  specific  option,  use:  [1mfastfetch  -h  <option_name_with‐[0m
+       [1mout_dashes>[0m
+
+       Any  combination  of  options can be made permanent by generating a configuration file: [1mfastfetch[0m
+       [1m<options> --gen-config[0m
+
+   [1mInformative[0m
+       [1m-h, --help [22m[[4mcommand[24m]
+               Display this help message or help for a specific command
+
+       [1m-v, --version[0m
+               Show the full version of fastfetch
+
+       [1m--version-raw[0m
+               Display the raw version string (major.minor.patch)
+
+       [1m--list-config-paths[0m
+               List search paths for config files
+
+       [1m--list-data-paths[0m
+               List search paths for presets and logos
+
+       [1m--list-logos[0m
+               List available logos
+
+       [1m--list-modules[0m
+               List available modules
+
+       [1m--list-presets[0m
+               List presets that fastfetch knows about
+
+               Presets can be loaded with "--config <preset-name>"
+
+       [1m--list-features[0m
+               List the supported features that fastfetch was compiled with
+
+               Mainly for development
+
+       [1m--print-logos[0m
+               Display available logos
+
+       [1m--print-structure[0m
+               Display the default structure
+
+       [1m--format [4m[22menum[0m
+               Set output format
+
+   [1mConfig[0m
+       [1m-c, --config [4m[22mconfig[0m
+               Specify the config file or preset to load
+
+               The file will be searched according to  the  order  shown  by  "fastfetch  --list-config-
+              paths".  Use  "none"  to disable further config loading. See also https://github.com/fast‐
+              fetch-cli/fastfetch/wiki/Configuration for more info
+
+       [1m--gen-config [22m[[4mpath[24m]
+               Generate a minimal config file at the specified path
+
+               Defaults to "~/.config/fastfetch/config.jsonc". Will print the generated config if <path>
+              is "-"
+
+       [1m--gen-config-full [22m[[4mpath[24m]
+               Generate a full config file with all optional options at the specified path
+
+               Defaults to "~/.config/fastfetch/config.jsonc". Will print the generated config if <path>
+              is "-"
+
+       [1m--gen-config-force [22m[[4mpath[24m]
+               Generate a config file at the specified path, overwriting any existing file
+
+               Defaults to "~/.config/fastfetch/config.jsonc"
+
+   [1mGeneral[0m
+       [1m--thread [22m[[4mbool[24m]
+               Use separate threads for HTTP requests
+
+       [1m--wmi-timeout [4m[22mnum[0m
+               Set the timeout (ms) for WMI queries
+
+               Windows only
+
+       [1m--processing-timeout [4m[22mnum[0m
+               Set the timeout (ms) when waiting for child processes
+
+       [1m--ds-force-drm [22m[[4menum[24m]
+               Specify whether only DRM should be used to detect displays
+
+               Use this option if you encounter problems with other detection methods.
+               Linux only
+
+       [1m--detect-version [22m[[4mbool[24m]
+               Specify whether to detect and display versions of terminal, shell, editor, and others
+
+               Mainly for benchmarking
+
+   [1mLogo[0m
+       [1m-l, --logo [4m[22mlogo[0m
+               Set the logo source. Use "none" to disable the logo
+
+               Should be  the  name  of  a  built-in  logo  or  a  path  to  an  image  file.  See  also
+              https://github.com/fastfetch-cli/fastfetch/wiki/Logo-options
+
+       [1m--logo-type [4m[22menum[0m
+               Set the type of the logo specified in "--logo"
+
+               See also https://github.com/fastfetch-cli/fastfetch/wiki/Logo-options
+
+       [1m--logo-width [4m[22mnum[0m
+               Set the width of the logo (in characters) if it is an image
+
+               Required for iTerm image protocol
+
+       [1m--logo-height [4m[22mnum[0m
+               Set the height of the logo (in characters) if it is an image
+
+               Required for iTerm image protocol
+
+       [1m--logo-preserve-aspect-ratio [22m[[4mbool[24m]
+               Specify  whether  the logo should fill the specified width and height as much as possible
+              without stretching
+
+               Supported by iTerm image protocol only
+
+       [1m--logo-color-[1-9] [4m[22mcolor[0m
+               Override a color in the logo
+
+               See `-h color` for the list of available colors
+
+       [1m--logo-padding [4m[22mnum[0m
+               Set the padding on the left and right sides of the logo
+
+       [1m--logo-padding-left [4m[22mnum[0m
+               Set the padding on the left side of the logo
+
+       [1m--logo-padding-right [4m[22mnum[0m
+               Set the padding on the right side of the logo
+
+       [1m--logo-padding-top [4m[22mnum[0m
+               Set the padding at the top of the logo
+
+       [1m--logo-print-remaining [22m[[4mbool[24m]
+               Specify whether to print the remaining logo if it has more lines than modules to display
+
+       [1m--logo-position [4m[22menum[0m
+               Set the position where the logo should be displayed
+
+       [1m--logo-recache [22m[[4mbool[24m]
+               If true, regenerate the image logo cache
+
+       [1m--file [4m[22mpath[0m
+               Short for --logo-type file --logo <path>
+
+               See "--help logo-type" for more info
+
+       [1m--file-raw [4m[22mpath[0m
+               Short for --logo-type file-raw --logo <path>
+
+               See "--help logo-type" for more info
+
+       [1m--data [4m[22mdata[0m
+               Short for --logo-type data --logo <data>
+
+               See "--help logo-type" for more info
+
+       [1m--data-raw [4m[22mdata[0m
+               Short for --logo-type data-raw --logo <data>
+
+               See "--help logo-type" for more info
+
+       [1m--raw [4m[22mpath[0m
+               Short for --logo-type raw --logo <path>
+
+               See "--help logo-type" for more info
+
+       [1m--sixel [4m[22mpath[0m
+               Short for --logo-type sixel --logo <path>
+
+               See "--help logo-type" for more info
+
+       [1m--kitty [4m[22mpath[0m
+               Short for --logo-type kitty --logo <path>
+
+               See "--help logo-type" for more info
+
+       [1m--kitty-direct [4m[22mpath[0m
+               Short for --logo-type kitty-direct --logo <path>
+
+               See "--help logo-type" for more info
+
+       [1m--kitty-icat [4m[22mpath[0m
+               Short for --logo-type kitty-icat --logo <path>
+
+               See "--help logo-type" for more info
+
+       [1m--iterm [4m[22mpath[0m
+               Short for --logo-type iterm --logo <path>
+
+               See "--help logo-type" for more info
+
+       [1m--chafa [4m[22mpath[0m
+               Short for --logo-type chafa --logo <path>
+
+               See "--help logo-type" for more info
+
+       [1m--chafa-fg-only [22m[[4mbool[24m]
+               Produce character-cell output using foreground colors only
+
+               See chafa document for detail
+
+       [1m--chafa-symbols [4m[22mstr[0m
+               Specify character symbols to employ in final output
+
+               See chafa document for detail
+
+       [1m--chafa-canvas-mode [4m[22menum[0m
+               Determine how colors are used in the output
+
+               This value maps the int value of enum ChafaCanvasMode. See chafa document for detail
+
+       [1m--chafa-color-space [4m[22menum[0m
+               Set color space used for quantization
+
+               This value maps the int value of enum ChafaColorSpace. See chafa document for detail
+
+       [1m--chafa-dither-mode [4m[22menum[0m
+               Set output dither mode (No effect with 24-bit color)
+
+               This value maps the int value of enum ChafaDitherMode. See chafa document for detail
+
+   [1mDisplay[0m
+       [1m-s, --structure [4m[22mstructure[0m
+               Set the structure of the fetch
+
+               Must be a colon-separated list of keys. Use "fastfetch --list-modules" to  see  available
+              options
+
+       [1m--stat [22m[[4mbool[24m]
+               Show time usage (in ms) for individual modules
+
+       [1m--pipe [22m[[4mbool[24m]
+               Disable colors
+
+               Auto-detected based on isatty(1) by default
+
+       [1m--color [4m[22mcolor[0m
+               Set the color of both keys and title
+
+               Shortcut for "--color-keys <color>" and "--color-title <color>"
+               For color syntax, see <https://github.com/fastfetch-cli/fastfetch/wiki/Color-Format-Spec‐
+              ification>
+
+       [1m--color-keys [4m[22mcolor[0m
+               Set the color of the keys
+
+               Doesn't  affect  Title,  Separator,  and  Colors  modules. See `-h color` for the list of
+              available colors
+
+       [1m--color-title [4m[22mcolor[0m
+               Set the color of the title
+
+               See `-h color` for the list of available colors
+
+       [1m--color-output [4m[22mcolor[0m
+               Set the color of module output
+
+               See `-h color` for the list of available colors
+
+       [1m--color-separator [4m[22mcolor[0m
+               Set the color of the key-value separator
+
+               See `-h color` for the list of available colors
+
+       [1m--duration-abbreviation [22m[[4mbool[24m]
+               Specify whether to abbreviate duration values
+
+               If true, the output will be in the form of "1h 2m" instead of "1 hour, 2 mins"
+
+       [1m--duration-space-before-unit [4m[22menum[0m
+               Specify whether to put a space before the unit in duration values
+
+       [1m--key-width [4m[22mnum[0m
+               Align the width of keys to <num> characters
+
+       [1m--key-padding-left [4m[22mnum[0m
+               Set the left padding of keys to <num> characters
+
+       [1m--key-type [4m[22menum[0m
+               Specify whether to show an icon before string keys
+
+       [1m--bright-color [22m[[4mbool[24m]
+               Specify whether keys, title, and ASCII logo should be printed in bright color
+
+       [1m--separator [4m[22mstr[0m
+               Set the separator between key and value
+
+       [1m--show-errors [22m[[4mbool[24m]
+               Print errors when they occur
+
+       [1m--disable-linewrap [22m[[4mbool[24m]
+               Specify whether to disable line wrap during execution
+
+       [1m--hide-cursor [22m[[4mbool[24m]
+               Specify whether to hide the cursor during execution
+
+       [1m--percent-type [4m[22mnum[0m
+               Set the percentage output type
+
+               1 for percentage number
+               2 for multi-color bar
+               3 for both
+               6 for bar only
+               9 for colored number
+               10 for monochrome bar
+
+       [1m--percent-ndigits [4m[22mnum[0m
+               Set the number of digits to keep after the decimal point when formatting percentage  num‐
+              bers
+
+       [1m--percent-color-green [4m[22mcolor[0m
+               Set color used for the green state of percentage bars and numbers
+
+               See `-h color` for the list of available colors
+
+       [1m--percent-color-yellow [4m[22mcolor[0m
+               Set color used for the yellow state of percentage bars and numbers
+
+               See `-h color` for the list of available colors
+
+       [1m--percent-color-red [4m[22mcolor[0m
+               Set color used for the red state of percentage bars and numbers
+
+               See `-h color` for the list of available colors
+
+       [1m--percent-space-before-unit [4m[22menum[0m
+               Specify whether to put a space before the percentage symbol
+
+       [1m--percent-width [4m[22mnum[0m
+               Specify the width of the percentage number, in number of characters
+
+               This option affects only percentage numbers, not bars
+
+       [1m--bar-char-elapsed [4m[22mstr[0m
+               Set the character to use in the elapsed part of percentage bars
+
+       [1m--bar-char-total [4m[22mstr[0m
+               Set the character to use in the total part of percentage bars
+
+       [1m--bar-border-left [4m[22mstring[0m
+               Set the string to use at the left border of percentage bars
+
+       [1m--bar-border-right [4m[22mstring[0m
+               Set the string to use at the right border of percentage bars
+
+       [1m--bar-border-left-elapsed [4m[22mstring[0m
+               If  both bar-border-left-elapsed and bar-border-right-elapsed are set, the border will be
+              used as parts of bar content
+
+       [1m--bar-border-right-elapsed [4m[22mstring[0m
+               If both bar-border-left-elapsed and bar-border-right-elapsed are set, the border will  be
+              used as parts of bar content
+
+       [1m--bar-color-elapsed [4m[22mcolor[0m
+               Set the color to use in the elapsed part of percentage bars
+
+               By default, auto selected by percent-color-{green,yellow,red}
+
+       [1m--bar-color-total [4m[22mcolor[0m
+               Set the color to use in the total part of percentage bars
+
+       [1m--bar-color-border [4m[22mcolor[0m
+               Set the color to use in the borders of percentage bars
+
+       [1m--bar-width [4m[22mnum[0m
+               Set the width of percentage bars in characters
+
+       [1m--no-buffer [22m[[4mbool[24m]
+               Specify whether the stdout application buffer should be disabled
+
+       [1m--size-ndigits [4m[22mnum[0m
+               Set the number of digits to keep after the decimal point when formatting sizes
+
+       [1m--size-binary-prefix [4m[22menum[0m
+               Set the binary prefix to use when formatting sizes
+
+       [1m--size-max-prefix [4m[22menum[0m
+               Set the largest binary prefix to use when formatting sizes
+
+       [1m--size-space-before-unit [4m[22menum[0m
+               Specify whether to put a space before the unit
+
+       [1m--freq-ndigits [4m[22mnum[0m
+               Set  the number of digits to keep after the decimal point when printing CPU/GPU frequency
+              in GHz
+
+       [1m--freq-space-before-unit [4m[22menum[0m
+               Specify whether to put a space before the unit
+
+       [1m--fraction-ndigits [4m[22mnum[0m
+               Set the number of digits to keep after the decimal point when printing ordinary  fraction
+              numbers
+
+               If negative, the number of digits will be automatically determined based on the value
+
+       [1m--temp-unit [4m[22menum[0m
+               Set the temperature unit
+
+       [1m--temp-ndigits [4m[22mnum[0m
+               Set the number of digits to keep after the decimal point when printing temperature
+
+       [1m--temp-color-green [4m[22mcolor[0m
+               Set color used for the green state of temperature values
+
+               See `-h color` for the list of available colors
+
+       [1m--temp-color-yellow [4m[22mcolor[0m
+               Set color used for the yellow state of temperature values
+
+               See `-h color` for the list of available colors
+
+       [1m--temp-color-red [4m[22mcolor[0m
+               Set color used for the red state of temperature values
+
+               See `-h color` for the list of available colors
+
+       [1m--temp-space-before-unit [4m[22menum[0m
+               Specify whether to put a space before the unit
+
+[1mEXAMPLES[0m
+   [1mBasic Usage[0m
+       [1mfastfetch[0m
+
+   [1mUse a specific logo[0m
+       [1mfastfetch --logo arch[0m
+
+   [1mCustom structure[0m
+       [1mfastfetch --structure title:os:kernel:uptime:memory[0m
+
+   [1mGenerate a config file[0m
+       [1mfastfetch --gen-config[0m
+
+   [1mUse a preset[0m
+       [1mfastfetch --config neofetch[0m
+
+   [1mConfig File Example[0m
+       // ~/.config/fastfetch/config.jsonc
+       {
+           "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+           "logo": {
+               "type": "auto",
+               "source": "arch"
+           },
+           "display": {
+               "separator": ": ",
+               "color": {
+                   "keys": "blue",
+                   "title": "red"
+               },
+               "key": {
+                   "width": 12
+               }
+           },
+           "modules": [
+               "title",
+               "separator",
+               "os",
+               "kernel",
+               "uptime",
+               {
+                   "type": "memory",
+                   "format": "{used}/{total} ({used_percent}%)"
+               }
+           ]
+       }
+
+[1mSEE ALSO[0m
+       [1mneofetch[22m(1)
+
+[1mBUGS[0m
+       Please report bugs to: https://github.com/fastfetch-cli/fastfetch/issues
+
+[1mAUTHORS[0m
+       Fastfetch  is developed by a team of contributors on GitHub.  Visit https://github.com/fastfetch-
+       cli/fastfetch for more information.
+
+Fastfetch 2.50.2                               Aug 16 2025                                  [4mFASTFETCH[24m(1)
