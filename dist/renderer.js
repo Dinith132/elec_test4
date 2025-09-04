@@ -226,7 +226,7 @@ function connectWs(url = WS_URL) {
                     break;
                 }
             }
-            appendLine("PROMPT", `${currentDir} $`);
+            // appendLine("PROMPT", `${currentDir} $`);
         });
     };
     socket.onmessage = async (ev) => {
@@ -538,9 +538,6 @@ if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput ===
             const outPre = panel?.querySelector(`pre.code[data-step-output="${currentRequestId}:${currentExecutingStepId}"]`);
             if (outPre) {
                 const lines = data.text.split("\n");
-                // console.log("======================")
-                // console.log(lines)
-                // console.log("======================")
                 // Remove any trailing lines that are PROMPT_#END# or _CURRENT_DIR:<dir>
                 while (lines.length) {
                     const lastLine = lines[lines.length - 1];
@@ -562,9 +559,6 @@ if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput ===
                     }
                     // console.log("*******************************")
                 }
-                console.log("000000000000000000000000000");
-                console.log(currentDir);
-                console.log("000000000000000000000000000");
                 outPre.textContent += lines.join("\n");
             }
         }

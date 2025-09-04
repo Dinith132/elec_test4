@@ -261,7 +261,7 @@ function connectWs(url = WS_URL) {
           break;
         }
       }
-      appendLine("PROMPT", `${currentDir} $`);
+      // appendLine("PROMPT", `${currentDir} $`);
     });
   };
 
@@ -609,9 +609,7 @@ if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput ===
 
       if (outPre) {
         const lines = data.text.split("\n");
-        // console.log("======================")
-        // console.log(lines)
-        // console.log("======================")
+ 
 
 
         // Remove any trailing lines that are PROMPT_#END# or _CURRENT_DIR:<dir>
@@ -635,10 +633,6 @@ if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput ===
           // console.log("*******************************")
 
         }
-
-        console.log("000000000000000000000000000")
-        console.log(currentDir)
-        console.log("000000000000000000000000000")
 
 
         outPre.textContent += lines.join("\n");
