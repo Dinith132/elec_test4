@@ -1,7 +1,8 @@
 // main.ts
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, ipcRenderer } from 'electron';
 import { spawn } from 'child_process';
 import * as path from 'node:path';
+import Convert from "ansi-to-html";
 
 // This function creates the main browser window.
 const createWindow = (): void => {
@@ -21,6 +22,9 @@ const createWindow = (): void => {
   });
 
   const userShells: Record<number, any> = {};
+
+
+
 
   ipcMain.handle('run-command', async (event, cmd: string) => {
     const senderId = event.sender.id;
@@ -47,10 +51,6 @@ const createWindow = (): void => {
 
       const onStdout = (data: Buffer) => {
         const dataStr = data.toString();
-        console.log("....................................")
-        console.log(dataStr);
-        console.log("....................................")
-
         buffer += dataStr;
         output += dataStr;
         event.sender.send('stream-output', { text: dataStr, isError: false });
@@ -97,6 +97,25 @@ const createWindow = (): void => {
 
     });
   });
+
+
+ipcMain.handle('ansi-to-html', async (event, ansiText: string) => {
+  const converter = new Convert({
+    fg: '#FFF',       // default foreground
+    bg: '#000',       // default background
+    newline: true,    // preserve newlines
+    escapeXML: true,  // escape HTML chars
+    stream: true,     // treat as stream (important!)
+    // DO NOT strip spaces
+    // 'ansi-to-html' may strip leading spaces if stream=false
+  });
+
+  console.log("Converting ANSI to HTML:", JSON.stringify(ansiText));
+  const html = converter.toHtml(ansiText);
+  console.log("Converted ANSI to HTML:", html);
+
+  return html;
+});
 
   // main.ts (add this after you create BrowserWindow)
 

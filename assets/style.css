@@ -263,6 +263,42 @@ body:hover {
   gap: var(--space-sm);
 }
 
+
+
+
+/* start  */
+
+/* Typewriter Panel */
+.typewriter-panel {
+  margin: var(--space-lg) 0;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  animation: slideInUp 0.4s ease-out;
+  box-shadow: var(--shadow-md);
+}
+#start_body {
+  font-family: 'Times New Roman', Times, serif;
+  white-space: pre;
+  line-height: 1.2em; 
+}
+
+
+/* Body inside the typewriter panel */
+.typewriter-body {
+  padding: var(--space-md);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  animation: typewriter 0.6s ease-out;
+}
+
+
 /* Terminal Wrapper */
 .terminal-wrapper {
   flex: 1;

@@ -23,4 +23,7 @@
 //   }
 // }
 
-// export {};
+declare module 'ansi-to-html';
+
+export {};
+

@@ -1,4 +1,3 @@
-// renderer.ts
 const WS_URL = "ws://localhost:8000/ws ";
 
 const statusEl = document.getElementById("status") as HTMLDivElement;
@@ -36,11 +35,12 @@ const stepPanels = new Map<string, Map<string, HTMLElement>>();           // per
 let planningSpinnerEl: HTMLElement | null = null;
 let summarySpinnerEl: HTMLElement | null = null;
 
+// const convert = new AnsiToHtml();
 // ---- helpers ----
 function lockSend(lock: boolean) {
   sendBtn.disabled = lock;
   commandInput.disabled = lock;
-  
+
   // Update send button visual state
   if (lock) {
     sendBtn.style.opacity = '0.5';
@@ -93,34 +93,79 @@ function appendLine(kind: string, text: string, codeBlock?: string) {
 }
 
 // Typewriter effect for system info
-function typewriterLine(kind: string, text: string, delay: number = 0): Promise<void> {
+// function typewriterLine(kind: string, text: string, delay: number = 0): Promise<void> {
+//   return new Promise(resolve => {
+//     const line = document.createElement("div");
+//     line.className = "line";
+
+//     const tag = document.createElement("span");
+//     tag.textContent = `[${kind}] `;
+//     tag.className = kind.toLowerCase();
+
+//     const content = document.createElement("span");
+//     line.appendChild(tag);
+//     line.appendChild(content);
+
+//     terminalEl.appendChild(line);
+
+//     let index = 0;
+//     const timer = setInterval(() => {
+//       if (index < text.length) {
+//         content.textContent += text[index];
+//         index++;
+//         terminalEl.scrollTop = terminalEl.scrollHeight;
+//       } else {
+//         clearInterval(timer);
+//         resolve();
+//       }
+//     }, delay);
+//   });
+// }
+
+const startpanel = document.createElement("div");
+startpanel.className = "typewriter-panel";
+const start_body = document.createElement("div");
+start_body.className = "typewriter-body";
+startpanel.appendChild(start_body);
+
+// Append panel to terminal
+terminalEl.appendChild(startpanel);
+terminalEl.scrollTop = terminalEl.scrollHeight;
+
+
+async function typewriterPanel(kind: string, text: string, delay: number = 1): Promise<HTMLElement> {
+  // Create a container div similar to step panel but simpler
+
+  // Typewriter effect
+  let index = 0;
   return new Promise(resolve => {
-    const line = document.createElement("div");
-    line.className = "line";
+    const timer = setInterval(async () => {
 
-    const tag = document.createElement("span");
-    tag.textContent = `[${kind}] `;
-    tag.className = kind.toLowerCase();
+      // body.textContent +=text;
+      if (index < 1) {
+        // const char = text[index];
 
-    const content = document.createElement("span");
-    line.appendChild(tag);
-    line.appendChild(content);
-    
-    terminalEl.appendChild(line);
-    
-    let index = 0;
-    const timer = setInterval(() => {
-      if (index < text.length) {
-        content.textContent += text[index];
+        const html = await window.appAPI.asni.ansiToHtml(text);
+        const pre = document.createElement("pre");
+        pre.innerHTML = html;
+        pre.style.whiteSpace = "pre"; // preserve all spaces and line breaks
+        pre.style.fontFamily = "monospace"; // terminal-like font
+
+        start_body.appendChild(pre);
         index++;
         terminalEl.scrollTop = terminalEl.scrollHeight;
       } else {
         clearInterval(timer);
-        resolve();
+        resolve(startpanel); // return the panel for further use if needed
       }
-    }, delay);
+    });
   });
+
+  // return new Promise(resolve => {
+  //   body.textContent = text;
+  // })
 }
+
 
 function tryParseJSON(s: string): any | null {
   try { return JSON.parse(s); } catch { return null; }
@@ -259,7 +304,7 @@ function getOrCreateStepPanel(requestId: string, stepId: string, description?: s
 function setStepStatus(requestId: string, stepId: string, status: "pending" | "running" | "success" | "failed") {
   const panel = stepPanels.get(requestId)?.get(stepId);
   if (!panel) return;
-  
+
   const dot = panel.querySelector(".status-dot") as HTMLElement | null;
   const spinner = panel.querySelector(".step-spinner") as HTMLElement | null;
 
@@ -267,7 +312,7 @@ function setStepStatus(requestId: string, stepId: string, status: "pending" | "r
     dot.classList.remove("status-pending", "status-running", "status-success", "status-failed");
     dot.classList.add(`status-${status}`);
   }
-  
+
   if (spinner) {
     if (status === "running" || status === "pending") {
       spinner.classList.remove("spinner-done");
@@ -284,22 +329,23 @@ function setStepStatus(requestId: string, stepId: string, status: "pending" | "r
 async function showStartupInfo() {
   try {
     // appendLine("SYSTEM", "Initializing futuristic terminal...");
-    
+
     // Add a small delay for visual effect
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     // Run fastfetch for system info
-    const output = await runLocalCommand("fastfetch 2>/dev/null || neofetch 2>/dev/null || uname -a");
+    const x = "fastfetch"
+    const output = await runLocalCommand(x);
     const lines = output.split("\n");
 
     // Display system info with typewriter effect
     for (const line of lines) {
-      if (line.trim() && !line.includes("PROMPT_#END#") && !line.includes("_CURRENT_DIR:")) {
-        await typewriterLine("SYSTEM", line.trim(), 20);
+      if (!line.includes("PROMPT_#END#") && !line.includes("_CURRENT_DIR:")) {
+        await typewriterPanel("SYSTEM", line, 20);
         await new Promise(resolve => setTimeout(resolve, 50));
       }
     }
-    
+
     // Get initial directory
     const dirOutput = await runLocalCommand("pwd");
     const dirLines = dirOutput.split("\n");
@@ -313,15 +359,15 @@ async function showStartupInfo() {
         break;
       }
     }
-    
+
     updatePrompt();
-    appendLine("SYSTEM", `Current directory: ${currentDir}`);
-    appendLine("SYSTEM", "Terminal ready for AI-powered commands");
-    
+    // appendLine("SYSTEM", `Current directory: ${currentDir}`);
+    // appendLine("SYSTEM", "Terminal ready for AI-powered commands");
+
   } catch (err) {
     const errStr = err instanceof Error ? err.message : String(err);
     appendLine("ERROR", `Failed to run startup info: ${errStr}`);
-    
+
     // Fallback - at least get the directory
     try {
       const dirOutput = await runLocalCommand("pwd");
@@ -343,21 +389,21 @@ async function showStartupInfo() {
 // ---- WebSocket ----
 function connectWs(url = WS_URL) {
   statusEl.textContent = `Connecting to AI agent...`;
-  
+
   socket = new WebSocket(url);
 
   socket.onopen = async () => {
-    statusEl.textContent = `Connected to `+url;
+    statusEl.textContent = `Connected to ` + url;
     const statusDot = document.querySelector(".status-dot") as HTMLElement;
     if (statusDot) statusDot.className = "status-dot connected";
-    
+
     const output = await runLocalCommand("pwd");
     const lines = output.split("\n");
     const currentDirLine = lines.find(line => line.startsWith("_CURRENT_DIR:"));
     if (currentDirLine) currentDir = currentDirLine.replace("_CURRENT_DIR:", "").trim();
     updatePrompt()
     // Show startup info first
-    // await showStartupInfo();
+    await showStartupInfo();
   };
 
   socket.onmessage = async (ev: MessageEvent) => {
@@ -373,9 +419,9 @@ function connectWs(url = WS_URL) {
     }
 
     const msg = tryParseJSON(raw);
-    if (!msg) { 
-      appendLine("AGENT", raw); 
-      return; 
+    if (!msg) {
+      appendLine("AGENT", raw);
+      return;
     }
 
     const type = msg.type ?? "UNKNOWN";
@@ -397,10 +443,10 @@ function connectWs(url = WS_URL) {
         completeSpinner(planningSpinnerEl, "Plan created successfully");
         const steps = (data.steps ?? []) as Array<{ step_id: string; description: string }>;
         appendLine("PLAN", "Execution Plan Generated");
-        
+
         for (const s of steps) {
           appendLine("PLAN", `${s.step_id}: ${s.description}`);
-          
+
           const li = document.createElement("li");
           li.textContent = `${s.step_id}: ${s.description}`;
           li.dataset.execId = s.step_id;
@@ -520,7 +566,7 @@ function connectWs(url = WS_URL) {
           } catch (err) {
             const errStr = err instanceof Error ? err.message : String(err);
             appendLine("ERROR", `Execution failed for step ${stepId}: ${errStr}`);
-            
+
             const resultMsg = {
               type: "EXECUTE_CODE_RESULT",
               code,
@@ -596,7 +642,7 @@ function connectWs(url = WS_URL) {
           if (type === "DEBUG_SUCCESS") setStepStatus(requestId, stepId, "success");
           if (type === "DEBUG_FAIL" || type === "DEBUG_ABORT") setStepStatus(requestId, stepId, "failed");
           appendLine("DEBUG", `${type}: ${JSON.stringify(data)}`);
-          
+
           const li = pendingExecutions.get(stepId);
           if (li) {
             if (type === "DEBUG_SUCCESS") {
@@ -657,7 +703,7 @@ function connectWs(url = WS_URL) {
 sendBtn.addEventListener("click", () => {
   const text = commandInput.value.trim();
   if (!text) return;
-  
+
   if (!socket || socket.readyState !== WebSocket.OPEN) {
     appendLine("ERROR", "WebSocket is not connected to AI agent.");
     return;
@@ -690,9 +736,9 @@ clearBtn.addEventListener("click", () => {
   stepPanels.clear();
   planningSpinnerEl = null;
   summarySpinnerEl = null;
-      setTimeout(() => {
-        clearBtn.classList.remove('clearing');
-    }, 300); // match animation duration
+  setTimeout(() => {
+    clearBtn.classList.remove('clearing');
+  }, 300); // match animation duration
   // appendLine("SYSTEM", "Terminal and plan cleared.");
 });
 
@@ -766,14 +812,14 @@ function loadSettings() {
   const savedTheme = localStorage.getItem("theme") || "dark";
   const savedFontSize = localStorage.getItem("fontSize") || "14";
   const savedTransparency = localStorage.getItem("transparency") || "85";
-  
+
   themeSelect.value = savedTheme;
   document.body.setAttribute("data-theme", savedTheme);
-  
+
   fontSizeSlider.value = savedFontSize;
   fontSizeValue.textContent = savedFontSize + "px";
   document.documentElement.style.setProperty("--font-size-md", savedFontSize + "px");
-  
+
   transparencySlider.value = savedTransparency;
   transparencyValue.textContent = savedTransparency + "%";
   const opacity = parseInt(savedTransparency) / 100;
@@ -831,12 +877,12 @@ if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput ===
 
 
         const cleanText = lines.join("\n");
-        console.log("cleanText----",cleanText)
+        console.log("cleanText----", cleanText)
         // console.log("cleanText----",cleanText)
         if (cleanText) {
-          outPre.textContent += cleanText+"\n";
+          outPre.textContent += cleanText + "\n";
         }
-  
+
       }
     }
   });

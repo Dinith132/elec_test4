@@ -14,10 +14,14 @@ interface VersionsAPI {
 interface WindowControlAPI {
     (action: "minimize" | "maximize" | "close"): void;
 }
+interface AsniAPI {
+    ansiToHtml: (ansiText: string) => Promise<string>;
+}
 interface AppAPI {
     versions: VersionsAPI;
     terminal: TerminalAPI;
     windowControl: WindowControlAPI;
+    asni: AsniAPI;
 }
 declare global {
     interface Window {

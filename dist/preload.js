@@ -10,6 +10,7 @@ electron_1.contextBridge.exposeInMainWorld("appAPI", {
         onStreamOutput: (callback) => {
             electron_1.ipcRenderer.on("stream-output", (event, data) => callback(data));
         },
+        // ansiToHtml: (ansiText: string) => new Convert().toHtml(ansiText),
     },
     // versions API
     versions: {
@@ -22,5 +23,8 @@ electron_1.contextBridge.exposeInMainWorld("appAPI", {
     windowControl: (action) => {
         electron_1.ipcRenderer.send("window-control", action);
     },
+    asni: {
+        ansiToHtml: (ansiText) => electron_1.ipcRenderer.invoke("ansi-to-html", ansiText)
+    }
 });
 //# sourceMappingURL=preload.js.map

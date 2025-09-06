@@ -1,12 +1,17 @@
 // preload.ts
 import { contextBridge, ipcRenderer } from "electron";
 
+// import Convert from "ansi-to-html";
+
+
+
 // -------- Types --------
 interface TerminalAPI {
   runCommand: (cmd: string) => Promise<string>;
   onStreamOutput: (
     callback: (data: { text: string; isError: boolean }) => void
   ) => void;
+  // ansiToHtml: (ansiText: string) => string;
 }
 
 interface VersionsAPI {
@@ -20,10 +25,15 @@ interface WindowControlAPI {
   (action: "minimize" | "maximize" | "close"): void;
 }
 
+interface AsniAPI{
+  ansiToHtml: (ansiText: string) => Promise<string>;
+}
+
 interface AppAPI {
   versions: VersionsAPI;
   terminal: TerminalAPI;
   windowControl: WindowControlAPI;
+  asni: AsniAPI;
 }
 
 // -------- Expose APIs --------
@@ -34,6 +44,8 @@ contextBridge.exposeInMainWorld("appAPI", {
     onStreamOutput: (callback) => {
       ipcRenderer.on("stream-output", (event, data) => callback(data));
     },
+    // ansiToHtml: (ansiText: string) => new Convert().toHtml(ansiText),
+
   },
 
   // versions API
@@ -48,12 +60,19 @@ contextBridge.exposeInMainWorld("appAPI", {
   windowControl: (action: "minimize" | "maximize" | "close") => {
     ipcRenderer.send("window-control", action);
   },
+
+  asni: {
+    ansiToHtml:(ansiText:string)=>ipcRenderer.invoke("ansi-to-html",ansiText)
+  }
+
 } as AppAPI);
 
-// extend Window typing
+// Extend window typing
 declare global {
   interface Window {
     appAPI: AppAPI;
   }
 }
+// const ansiConvert = new Convert();
+
 export {};

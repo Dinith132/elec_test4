@@ -1,5 +1,4 @@
 "use strict";
-// renderer.ts
 const WS_URL = "ws://localhost:8000/ws ";
 const statusEl = document.getElementById("status");
 const commandInput = document.getElementById("commandInput");
@@ -31,6 +30,7 @@ const pendingExecutions = new Map(); // plan list items by step_id
 const stepPanels = new Map(); // per-step UI panels
 let planningSpinnerEl = null;
 let summarySpinnerEl = null;
+// const convert = new AnsiToHtml();
 // ---- helpers ----
 function lockSend(lock) {
     sendBtn.disabled = lock;
@@ -79,30 +79,65 @@ function appendLine(kind, text, codeBlock) {
     terminalEl.scrollTop = terminalEl.scrollHeight;
 }
 // Typewriter effect for system info
-function typewriterLine(kind, text, delay = 0) {
+// function typewriterLine(kind: string, text: string, delay: number = 0): Promise<void> {
+//   return new Promise(resolve => {
+//     const line = document.createElement("div");
+//     line.className = "line";
+//     const tag = document.createElement("span");
+//     tag.textContent = `[${kind}] `;
+//     tag.className = kind.toLowerCase();
+//     const content = document.createElement("span");
+//     line.appendChild(tag);
+//     line.appendChild(content);
+//     terminalEl.appendChild(line);
+//     let index = 0;
+//     const timer = setInterval(() => {
+//       if (index < text.length) {
+//         content.textContent += text[index];
+//         index++;
+//         terminalEl.scrollTop = terminalEl.scrollHeight;
+//       } else {
+//         clearInterval(timer);
+//         resolve();
+//       }
+//     }, delay);
+//   });
+// }
+const startpanel = document.createElement("div");
+startpanel.className = "typewriter-panel";
+const start_body = document.createElement("div");
+start_body.className = "typewriter-body";
+startpanel.appendChild(start_body);
+// Append panel to terminal
+terminalEl.appendChild(startpanel);
+terminalEl.scrollTop = terminalEl.scrollHeight;
+async function typewriterPanel(kind, text, delay = 1) {
+    // Create a container div similar to step panel but simpler
+    // Typewriter effect
+    let index = 0;
     return new Promise(resolve => {
-        const line = document.createElement("div");
-        line.className = "line";
-        const tag = document.createElement("span");
-        tag.textContent = `[${kind}] `;
-        tag.className = kind.toLowerCase();
-        const content = document.createElement("span");
-        line.appendChild(tag);
-        line.appendChild(content);
-        terminalEl.appendChild(line);
-        let index = 0;
-        const timer = setInterval(() => {
-            if (index < text.length) {
-                content.textContent += text[index];
+        const timer = setInterval(async () => {
+            // body.textContent +=text;
+            if (index < 1) {
+                // const char = text[index];
+                const html = await window.appAPI.asni.ansiToHtml(text);
+                const pre = document.createElement("pre");
+                pre.innerHTML = html;
+                pre.style.whiteSpace = "pre"; // preserve all spaces and line breaks
+                pre.style.fontFamily = "monospace"; // terminal-like font
+                start_body.appendChild(pre);
                 index++;
                 terminalEl.scrollTop = terminalEl.scrollHeight;
             }
             else {
                 clearInterval(timer);
-                resolve();
+                resolve(startpanel); // return the panel for further use if needed
             }
-        }, delay);
+        });
     });
+    // return new Promise(resolve => {
+    //   body.textContent = text;
+    // })
 }
 function tryParseJSON(s) {
     try {
@@ -248,12 +283,13 @@ async function showStartupInfo() {
         // Add a small delay for visual effect
         await new Promise(resolve => setTimeout(resolve, 500));
         // Run fastfetch for system info
-        const output = await runLocalCommand("fastfetch 2>/dev/null || neofetch 2>/dev/null || uname -a");
+        const x = "fastfetch";
+        const output = await runLocalCommand(x);
         const lines = output.split("\n");
         // Display system info with typewriter effect
         for (const line of lines) {
-            if (line.trim() && !line.includes("PROMPT_#END#") && !line.includes("_CURRENT_DIR:")) {
-                await typewriterLine("SYSTEM", line.trim(), 20);
+            if (!line.includes("PROMPT_#END#") && !line.includes("_CURRENT_DIR:")) {
+                await typewriterPanel("SYSTEM", line, 20);
                 await new Promise(resolve => setTimeout(resolve, 50));
             }
         }
@@ -271,8 +307,8 @@ async function showStartupInfo() {
             }
         }
         updatePrompt();
-        appendLine("SYSTEM", `Current directory: ${currentDir}`);
-        appendLine("SYSTEM", "Terminal ready for AI-powered commands");
+        // appendLine("SYSTEM", `Current directory: ${currentDir}`);
+        // appendLine("SYSTEM", "Terminal ready for AI-powered commands");
     }
     catch (err) {
         const errStr = err instanceof Error ? err.message : String(err);
@@ -311,7 +347,7 @@ function connectWs(url = WS_URL) {
             currentDir = currentDirLine.replace("_CURRENT_DIR:", "").trim();
         updatePrompt();
         // Show startup info first
-        // await showStartupInfo();
+        await showStartupInfo();
     };
     socket.onmessage = async (ev) => {
         const raw = typeof ev.data === "string" ? ev.data : String(ev.data);
