@@ -5,10 +5,14 @@ import * as path from 'node:path';
 
 // This function creates the main browser window.
 const createWindow = (): void => {
+
+
   // Create the browser window.
   const win = new BrowserWindow({
     width: 800,
     height: 1000,
+    frame:false,
+    titleBarStyle: 'hidden',
     transparent: true, // Enable transparency for futuristic glass effect
     backgroundColor: '#00000000', // Fully transparent base color
     webPreferences: {
@@ -93,6 +97,27 @@ const createWindow = (): void => {
 
     });
   });
+
+  // main.ts (add this after you create BrowserWindow)
+
+  ipcMain.on("window-control", (event, action) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return;
+
+    if (action === "minimize") {
+      win.minimize();
+    } else if (action === "maximize") {
+      if (win.isMaximized()) {
+        win.unmaximize();
+      } else {
+        win.maximize();
+      }
+    } else if (action === "close") {
+      win.close();
+    }
+  });
+
+
 
   // Load the index.html file into the window.
   win.loadFile('index.html');

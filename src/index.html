@@ -2,173 +2,121 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Multi-Agent Orchestrator</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: "JetBrains Mono", monospace;
-      background-color: #0d0d0d;
-      color: #e0e0e0;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-
-    /* Status bar at top */
-    #status {
-      background-color: #111;
-      padding: 6px 12px;
-      color: #0f0;
-      font-weight: bold;
-      border-bottom: 1px solid #222;
-      font-size: 0.9rem;
-    }
-
-    #main-container {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    /* Terminal container */
-    #terminal-container {
-      flex: 2;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    /* Warp-like terminal */
-    #terminal {
-      flex: 1;
-      padding: 15px;
-      overflow-y: auto;
-      background-color: #0d0d0d;
-    }
-
-    /* Terminal blocks (like Warp) */
-    .block {
-      margin-bottom: 12px;
-      padding: 10px 12px;
-      border-radius: 6px;
-      background-color: #1a1a1a;
-    }
-
-    .block .meta {
-      font-size: 0.75rem;
-      color: #0a84ff;
-      margin-bottom: 4px;
-      display: block;
-    }
-
-    .block.agent { border-left: 3px solid #ffa500; }
-    .block.user { border-left: 3px solid #0ff; }
-    .block.exec { border-left: 3px solid #0f0; }
-    .block.error { border-left: 3px solid #f33; }
-    .block.summary { border-left: 3px solid #ff69b4; }
-
-    .block pre {
-      margin: 8px 0 0 0;
-      padding: 8px;
-      background-color: #111;
-      border-radius: 4px;
-      overflow-x: auto;
-      color: #0f0;
-      font-size: 0.9rem;
-    }
-
-    /* Plan sidebar */
-    #plan-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background-color: #151515;
-      overflow-y: auto;
-      border-left: 1px solid #222;
-    }
-
-    #plan-container h3 {
-      margin: 10px 0;
-      color: #fff;
-      text-align: center;
-      font-size: 1rem;
-      border-bottom: 1px solid #333;
-      padding-bottom: 5px;
-    }
-
-    #plan-list {
-      list-style-type: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    #plan-list li {
-      padding: 8px 12px;
-      margin: 6px 10px;
-      border-radius: 6px;
-      background-color: #222;
-      font-size: 0.85rem;
-      color: #eee;
-      transition: all 0.2s;
-    }
-
-    #plan-list li.pending { background-color: #444; }
-    #plan-list li.running { background-color: #0a84ff; }
-    #plan-list li.done { background-color: #28a745; }
-    #plan-list li.failed { background-color: #dc3545; }
-
-    /* Input bar */
-    #input-container {
-      display: flex;
-      padding: 8px;
-      background-color: #111;
-      border-top: 1px solid #222;
-    }
-
-    #user-input {
-      flex: 1;
-      padding: 6px 10px;
-      background-color: #000;
-      border: 1px solid #333;
-      border-radius: 4px;
-      color: #fff;
-      font-family: monospace;
-    }
-
-    #send-btn, #clear-btn {
-      padding: 6px 12px;
-      margin-left: 6px;
-      background-color: #0a84ff;
-      border-radius: 4px;
-      border: none;
-      color: #fff;
-      font-family: monospace;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-
-    #send-btn:hover, #clear-btn:hover { opacity: 0.85; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Futuristic AI Terminal</title>
+  <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
+  <!-- Custom macOS-style title bar -->
+  <div class="title-bar">
+    <div class="title-bar-controls">
+      <div class="control-button close"></div>
+      <div class="control-button minimize"></div>
+      <div class="control-button maximize"></div>
+    </div>
+    <div class="title-bar-title">AI Terminal</div>
+    <div class="title-bar-actions">
+      <button id="settingsBtn" class="icon-btn" title="Settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 -1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
 
-  <div id="status">Disconnected</div>
+  <div class="app-container">
+    <!-- Main terminal area -->
+    <div class="terminal-container">
+      <!-- Status bar -->
+      <div class="status-bar">
+        <div class="status-left">
+          <div class="status-item">
+            <span class="status-dot connected"></span>
+            <span id="status">Initializing...</span>
+          </div>
+        </div>
+        <div class="status-right">
+          <button id="connectBtn" class="btn-secondary">Reconnect</button>
+          <!-- <button id="clearBtn" class="btn-danger" disabled>Clear</button> -->
+        </div>
+      </div>
 
-  <div id="main-container">
-    <!-- Terminal Output -->
-    <div id="terminal-container">
-      <div id="terminal"></div>
-      <div id="input-container">
-        <input type="text" id="user-input" placeholder="Enter command...">
-        <button id="send-btn">Send</button>
-        <button id="clear-btn">Clear</button>
+      <!-- Terminal output -->
+      <div class="terminal-wrapper">
+        <div id="terminal" class="terminal"></div>
+        
+        <!-- Command input area -->
+        <div class="input-area">
+          <div class="prompt">
+            <span id="promptPath" class="prompt-path"></span>
+            <span class="prompt-symbol">$</span>
+          </div>
+          <input 
+            type="text" 
+            id="commandInput" 
+            class="command-input" 
+            placeholder="Enter your command or request..."
+            autocomplete="on"
+            spellcheck="false"
+          >
+          <button id="sendBtn" class="send-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- Plan / Steps -->
-    <div id="plan-container">
-      <h3>Execution Plan</h3>
-      <ul id="plan-list"></ul>
+    <!-- Plan sidebar -->
+    <div class="sidebar collapsed" id="sidebar">
+      <div class="sidebar-header">
+        <h3>Execution Plan</h3>
+        <button id="sidebarToggle" class="icon-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15,18 9,12 15,6"></polyline>
+          </svg>
+        </button>
+      </div>
+      <div class="sidebar-content">
+        <ul id="plan-list" class="plan-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button id="closeSettings" class="icon-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-item">
+          <label>Theme</label>
+          <select id="themeSelect">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <label>Font Size</label>
+          <input type="range" id="fontSizeSlider" min="12" max="18" value="14">
+          <span id="fontSizeValue">14px</span>
+        </div>
+        <div class="setting-item">
+          <label>Transparency</label>
+          <input type="range" id="transparencySlider" min="70" max="100" value="85">
+          <span id="transparencyValue">85%</span>
+        </div>
+      </div>
     </div>
   </div>
 

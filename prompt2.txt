@@ -1,210 +1,1091 @@
-I want to build an Electron-based terminal application with the following detailed requirements. The goal is a futuristic, highly interactive, “Warp/Hyperland”-style terminal with AI-powered planning and execution, smooth animations, and excellent UX. Please carefully follow all specifications.
+Build an Electron.js application that works as a futuristic AI-powered terminal with a Warp/Hyperland-style design.
 
-1️⃣ General Theme & Appearance
+Core Requirements
 
-Dark, futuristic, “Hyperland”/Warp-style aesthetic (like Warp terminal).
+Theme & UI
 
-Terminal-like interface, but not a plain black/white terminal.
+Dark futuristic Warp/Hyperland look, not plain black/white. and should transparent, curve like hyperland terminals
 
-Smooth animations everywhere: fading, sliding, blinking spinners, collapsible expansions.
+Title bar like macOS with custom window controls.
 
-Proper spacing between:
+Dark/light toggle in settings.
 
-Individual user requests
+Terminal background with subtle gradient/texture.
 
-Execution plans
+Good spacing between requests, plans, steps, and summaries.
 
-Code steps & outputs
+Modern icons (settings, expand/collapse, step status, checkmarks, errors).
 
-Summaries
+Nice font, line height, ligatures for readability.
 
-Title bar like MacOS with custom window controls.
+Terminal Behavior
 
-Support for dark/light toggle in settings.
+Prompt shows current directory like /home/user/projects $.
 
-Use modern icons for:
+Directory updates dynamically if cd or similar is executed.
 
-Settings, expand/collapse, step status (pending, running, success, failed), checkmarks, errors
+User input behaves like real terminal: command entry, send button disabled while running, input locked until workflow finishes.
 
-Nice font & line height for readability.
+Smooth output streaming: typewriter effect for reasoning, fastfetch, and command outputs.
 
-Terminal background with subtle gradient or texture, not flat black.
+Startup & System Info
 
-2️⃣ Terminal Behavior & Input
+On launch, run fastfetch (or system info).
 
-Working directory visible in the prompt, like a real shell:
+Show slowly, line by line with animation, properly formatted.
 
-Example: /home/dinith/projects $
+Capture initial working directory and display in prompt.
 
-Updates automatically if commands change directories.
+Fix formatting so no jumbled lines.
 
-User input line behaves like a terminal:
+Plan Sidebar
 
-Enter command/request
+Right-side expandable sidebar with AI-generated steps.
 
-Send button disabled while a request is running
+Each step: ID + description + status (pending, running, success, failed).
 
-Input locked until workflow finishes
+Step highlights while running.
 
-Smooth output streaming:
+Independent scroll if too long.
 
-Line-by-line or character-by-character “typewriter” effect for startup info, reasoning, and command output
+Spinner during planning → checkmark when ready.
 
-Streaming from executed commands should append live
+Steps Panel (Main Terminal Body)
 
-3️⃣ Startup & System Info
+Each step is a collapsible panel:
 
-On start, run fastfetch or similar system info command.
+Header: step number, description, status dot, running spinner.
 
-Display system info slowly with typewriter animation, properly formatted.
+Body: reasoning text, collapsible code block (fold/unfold), streaming output box.
 
-Initial current directory should be captured and displayed in the prompt.
+Smooth animations for collapse/expand, spinners, new lines.
 
-Fix formatting issues so output aligns visually and is readable.
+Auto-scroll step body with live output.
 
-4️⃣ Plan Sidebar / Execution Plan
+Execution & Streaming
 
-Right-side plan panel:
+AI can send code to execute locally.
 
-Expandable/minimizable
+Output streams line by line into step panel.
 
-Shows AI-generated steps
+Current directory updates automatically if changed.
 
-Each step displays:
+Locks input during execution.
 
-Step ID + description
+Updates sidebar status accordingly.
 
-Status indicator (pending, running, success, failed)
+Success/failure icons for each step.
 
-Highlighted while running
+Summary
 
-Sidebar should scroll independently if too long.
+After steps: spinner for summary → collapsible formatted results.
 
-Loading animations:
+Clear separation from previous steps and requests.
 
-Spinner during plan creation
+Smooth animated transition.
 
-Completed spinner when plan is ready
+Utilities & Extras
 
-5️⃣ Steps Panel / Execution Details
+Clear button clears terminal + sidebar gracefully.
 
-Each step has a collapsible panel:
+Multiple requests supported sequentially, grouped/visually separated.
 
-Header: Step number + description, status dot, running spinner
+Settings: dark/light toggle, font size/spacing.
 
-Body contains:
+Optional icons for collapsible sections.
 
-Reasoning / explanation paragraph(s)
+Persistent history of previous requests.
 
-Collapsible code block (fold/unfold, show actual code)
+Animations & UX
 
-Output streaming box (live output, fold/unfold)
+Typewriter effect for reasoning, system info, and code output.
 
-Step body scrolls automatically with output
+Spinner animations for planning, execution, summary.
 
-Smooth animations for spinners, collapsing, new lines, completion
+Fade/slide transitions for requests, steps, collapses.
 
-6️⃣ Code Execution & Streaming
+Highlight currently executing step in both sidebar & terminal.
 
-AI can request code execution:
+Smooth scroll-to-latest.
 
-Run command locally
+Advanced UX Enhancements
 
-Stream output line-by-line into step panel
+Hover preview of reasoning/code in sidebar.
+
+Optional search/filter in sidebar.
 
-Update current directory automatically if command changes it
+Timestamps on steps/outputs.
+
+Rich terminal output (colors, icons, warnings/errors).
+
+Background blur for depth on collapsible panels.
+
+Special Fix Requirements
+
+Fastfetch/System Info Display Fix: startup info must be correctly formatted, animated, aligned.
+
+Current Directory Fix: must always show in the prompt correctly, updating live, like a real terminal (not raw command output).
+
+✅ Goal: Create a polished, futuristic Electron.js AI terminal app that combines a beautiful animated UI with real terminal behaviors (system info, working directory, command execution, streaming output, AI planning/steps, summaries). Smooth animations, proper formatting, directory handling, and strong UX are critical.
+
+and for now i have halfly builded some electron.js for this requments.with below file structure
+
+elec_test4/
+├── dist/
+│   └── main.js
+├── accests/
+│   └──style.css
+├── src/
+│   ├──global.d.ts
+│   ├──index.html
+│   ├──preload.ts
+│   ├──renderer.ts
+│   └── main.ts
+├── node_modules/
+├──package.json
+├──tsconfig.json
+└── prompt2.txt
+
+almost main, preload, gloabal are correct, they are fine and renderer.ts is also have fine functions, but it not correctly show fastfetch, dir correctly, you have to figure out how to show it you have access to do any changes in renderer.ts to fix it and dont do unnecossory changes. here i am attach file above i mentioned, you can get refer them to generate project 
+
+main.ts
+// main.ts
+import { app, BrowserWindow, ipcMain } from 'electron';
+import { spawn } from 'child_process';
+import * as path from 'node:path';
+
+// This function creates the main browser window.
+const createWindow = (): void => {
+  // Create the browser window.
+  const win = new BrowserWindow({
+    width: 800,
+    height: 1000,
+    transparent: true, // Enable transparency for futuristic glass effect
+    backgroundColor: '#00000000', // Fully transparent base color
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+    },
+  });
+
+  const userShells: Record<number, any> = {};
+
+  ipcMain.handle('run-command', async (event, cmd: string) => {
+    const senderId = event.sender.id;
+
+    if (!userShells[senderId]) {
+      userShells[senderId] = spawn('/bin/zsh', [], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        cwd: process.env.HOME,
+        env: { ...process.env, PS1: 'PROMPT_#END# ' }, // Custom prompt for detection
+      });
+    }
+
+    const shell = userShells[senderId];
+    let finalCmd = cmd.trim();
+    if (finalCmd.startsWith("sudo ")) {
+      finalCmd = "pkexec " + finalCmd.slice(5); // strip "sudo " prefix
+    }
+
+    return new Promise<string>((resolve) => {
+      let output = '';
+      let error = '';
+      let maxTimeout: NodeJS.Timeout | null = null;
+      let buffer = '';
+
+      const onStdout = (data: Buffer) => {
+        const dataStr = data.toString();
+
+        buffer += dataStr;
+        output += dataStr;
+        event.sender.send('stream-output', { text: dataStr, isError: false });
+
+        // Check for prompt to detect command completion
+        if (buffer.includes('PROMPT_#END#')) {
+          cleanup();
+          resolve((output + error).trim());
+        }
+      };
+
+      const onStderr = (data: Buffer) => {
+        const dataStr = data.toString();
+        buffer += dataStr;
+        error += dataStr;
+        event.sender.send('stream-output', { text: dataStr, isError: true });
+
+        // Check for prompt in stderr too (some commands write prompts here)
+        if (buffer.includes('PROMPT_#END#')) {
+          cleanup();
+          resolve((output + error).trim());
+        }
+      };
+
+      const cleanup = () => {
+        shell.stdout.off('data', onStdout);
+        shell.stderr.off('data', onStderr);
+        if (maxTimeout) clearTimeout(maxTimeout);
+        buffer = ''; // Reset buffer for next command
+      };
+
+      // Fallback: max 5 minutes to prevent hanging
+      maxTimeout = setTimeout(() => {
+        cleanup();
+        event.sender.send('stream-output', { text: 'Command timed out after 5 minutes.', isError: true });
+        resolve((output + error + '\n[ERROR: Command timed out after 5 minutes.]').trim());
+      }, 5 * 60 * 1000); // 5 minutes
+
+      shell.stdout.on('data', onStdout);
+      shell.stderr.on('data', onStderr);
+
+      // Write command and ensure prompt is triggered
+      shell.stdin.write(`${finalCmd}\necho _CURRENT_DIR:$PWD; echo PROMPT_#END#\n`);
+
+    });
+  });
+
+  // Load the index.html file into the window.
+  win.loadFile('index.html');
+
+  // Clean up shell on window close
+  win.on('closed', () => {
+    const senderId = win.webContents.id;
+    if (userShells[senderId]) {
+      userShells[senderId].kill();
+      delete userShells[senderId];
+    }
+  });
+};
+
+// This method is called when Electron has finished initialization
+app.whenReady().then(() => {
+  createWindow();
+
+  // On macOS, re-create a window when the dock icon is clicked
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+
+// Quit the app when all windows are closed, except on macOS.
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+renderer.ts
+
+// renderer.ts
+const WS_URL = "https://a5641f415564.ngrok-free.app/ws";
+
+const statusEl = document.getElementById("status") as HTMLDivElement;
+const commandInput = document.getElementById("commandInput") as HTMLInputElement;
+const sendBtn = document.getElementById("sendBtn") as HTMLButtonElement;
+const clearBtn = document.getElementById("clearBtn") as HTMLButtonElement;
+const terminalEl = document.getElementById("terminal") as HTMLDivElement;
+const planListEl = document.getElementById("plan-list") as HTMLUListElement;
+
+// ---- state ----
+let socket: WebSocket | null = null;
+let currentRequestId: string | null = null;
+let currentExecutingStepId: string | null = null;
+let currentDir = "";
+
+const pendingExecutions = new Map<string, HTMLLIElement>(); // plan list items by step_id
+const stepPanels = new Map<string, Map<string, HTMLElement>>();           // per-step UI panels
+let planningSpinnerEl: HTMLElement | null = null;
+let summarySpinnerEl: HTMLElement | null = null;
+
+// ---- helpers ----
+function lockSend(lock: boolean) {
+  sendBtn.disabled = lock;
+  commandInput.disabled = lock;
+}
+
+function appendLine(kind: string, text: string, codeBlock?: string) {
+  if (typeof text === "string" && text.includes("PROMPT_#END#")) return;
+
+  const line = document.createElement("div");
+  line.className = "line";
+
+  const time = new Date().toLocaleTimeString();
+  const meta = document.createElement("span");
+  meta.className = "meta";
+  meta.textContent = `[${time}] `;
+  // line.appendChild(meta);
+
+  const tag = document.createElement("span");
+  tag.textContent = `[${kind}] `;
+  tag.className = kind.toLowerCase();
+  // line.appendChild(tag);
+
+  const content = document.createElement("span");
+  content.textContent = text;
+  line.appendChild(content);
+
+  // if (codeBlock) {
+  //   const code = document.createElement("pre");
+  //   code.className = "code";
+  //   code.textContent = codeBlock;
+  //   line.appendChild(code);
+  // }
+
+  terminalEl.appendChild(line);
+  terminalEl.scrollTop = terminalEl.scrollHeight;
+}
+
+function tryParseJSON(s: string): any | null {
+  try { return JSON.parse(s); } catch { return null; }
+}
+
+function getRunCommandFn(): ((cmd: string) => Promise<string>) | null {
+  const w = window as any;
+  if (w.terminal && typeof w.terminal.runCommand === "function") return w.terminal.runCommand.bind(w.terminal);
+  if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.runCommand === "function") return w.appAPI.terminal.runCommand.bind(w.appAPI.terminal);
+  if (typeof w.runCommand === "function") return w.runCommand.bind(w);
+  return null;
+}
+
+const runLocalCommand = async (cmd: string): Promise<string> => {
+  const fn = getRunCommandFn();
+  if (!fn) throw new Error("Local runCommand API not found.");
+  return await fn(cmd);
+};
+
+// ---- tiny UI widgets ----
+function makeSpinner(text: string): HTMLElement {
+  const wrap = document.createElement("div");
+  wrap.className = "spinner";
+  const dot = document.createElement("span");
+  dot.className = "spinner-dot";
+  dot.textContent = "●";
+  const label = document.createElement("span");
+  label.className = "spinner-text";
+  label.textContent = ` ${text}`;
+  wrap.appendChild(dot);
+  wrap.appendChild(label);
+  return wrap;
+}
+
+function completeSpinner(sp: HTMLElement | null, doneText?: string) {
+  if (!sp) return;
+  sp.classList.add("spinner-done");
+  const label = sp.querySelector(".spinner-text") as HTMLElement | null;
+  if (label && doneText) label.textContent = ` ${doneText}`;
+  // leave it visible but show as completed
+}
+
+function makeCollapsible(title: string, code?: string): { root: HTMLElement; body: HTMLElement } {
+  const root = document.createElement("div");
+  root.className = "collapsible";
+
+  const header = document.createElement("div");
+  header.className = "collapsible-header";
+  header.textContent = title;
+  const chev = document.createElement("span");
+  chev.className = "chevron";
+  chev.textContent = "▼";
+  header.appendChild(chev);
+
+  const body = document.createElement("div");
+  body.className = "collapsible-body";
+
+  if (code) {
+    const pre = document.createElement("pre");
+    pre.className = "code";
+    pre.textContent = code;
+    body.appendChild(pre);
+  }
+
+  header.addEventListener("click", () => {
+    body.classList.toggle("collapsed");
+    chev.textContent = body.classList.contains("collapsed") ? "▶" : "▼";
+  });
+
+  root.appendChild(header);
+  root.appendChild(body);
+  return { root, body };
+}
+
+function getOrCreateStepPanel(requestId: string, stepId: string, description?: string): HTMLElement {
+  // Ensure requestId has its own map
+  if (!stepPanels.has(requestId)) {
+    stepPanels.set(requestId, new Map<string, HTMLElement>());
+  }
+  const requestPanels = stepPanels.get(requestId)!;
+
+  // Reuse existing panel if already created
+  if (requestPanels.has(stepId)) {
+    return requestPanels.get(stepId)!;
+  }
+
+  // Create new panel
+  const panel = document.createElement("div");
+  panel.className = "step-panel";
+  panel.dataset.stepId = stepId;
+  panel.dataset.requestId = requestId;
+
+  const header = document.createElement("div");
+  header.className = "step-header";
+
+  const statusDot = document.createElement("span");
+  statusDot.className = "status-dot status-pending";
+
+  const title = document.createElement("span");
+  title.className = "step-title";
+  title.textContent = `Step ${stepId}${description ? `: ${description}` : ""}`;
+
+  const spinner = makeSpinner("Running...");
+  spinner.style.marginLeft = "8px";
+  spinner.classList.add("step-spinner");
+
+  header.appendChild(statusDot);
+  header.appendChild(title);
+  header.appendChild(spinner);
+
+  const body = document.createElement("div");
+  body.className = "step-body";
+
+  const reasoningBlock = document.createElement("div");
+  reasoningBlock.className = "step-reasoning";
+
+  const codeWrap = document.createElement("div");
+  codeWrap.className = "step-code-wrap";
+
+  const outputWrap = document.createElement("div");
+  outputWrap.className = "step-output-wrap";
+  const outPre = document.createElement("pre");
+  outPre.className = "code";
+  outPre.dataset.stepOutput = `${requestId}:${stepId}`;
+  outputWrap.appendChild(outPre);
+
+  body.appendChild(reasoningBlock);
+  body.appendChild(codeWrap);
+  body.appendChild(outputWrap);
+
+  panel.appendChild(header);
+  panel.appendChild(body);
+
+  // Insert into terminal (scroll to bottom)
+  terminalEl.appendChild(panel);
+  terminalEl.scrollTop = terminalEl.scrollHeight;
+
+  // Save in nested map
+  requestPanels.set(stepId, panel);
+
+  return panel;
+}
+
+
+function setStepStatus(requestId: string, stepId: string, status: "pending" | "running" | "success" | "failed") {
+  const panel = stepPanels.get(requestId)?.get(stepId);
+  if (!panel) return;
+  const dot = panel.querySelector(".status-dot") as HTMLElement | null;
+  const spinner = panel.querySelector(".step-spinner") as HTMLElement | null;
+
+  if (dot) {
+    dot.classList.remove("status-pending", "status-running", "status-success", "status-failed");
+    dot.classList.add(`status-${status}`);
+  }
+  if (spinner) {
+    if (status === "running" || status === "pending") {
+      spinner?.classList.remove("spinner-done");
+    } else {
+      completeSpinner(
+        spinner,
+        status === "success" ? "Done" :
+          status === "failed" ? "Failed" : undefined
+      );
+    }
+
+  }
+}
+
+async function showStartupInfo() {
+  try {
+    // Run fastfetch/neofetch or any command that prints system info
+    const output = await runLocalCommand("fastfetch"); // use --stdout for pure text
+    const lines = output.split("\n");
+
+    // Append each line to terminal
+    for (const line of lines) {
+      if (line.trim()) appendLine("SYSTEM", line);
+    }
+  } catch (err) {
+    const errStr = err instanceof Error ? err.message : String(err);
+    appendLine("ERROR", `Failed to run startup info: ${errStr}`);
+  }
+}
+
+
+// ---- WebSocket ----
+function connectWs(url = WS_URL) {
+  socket = new WebSocket(url);
+  statusEl.textContent = `Connecting to ${url}...`;
+
+  socket.onopen = () => {
+    statusEl.textContent = `Connected to agent at ${WS_URL}`;
+    appendLine("SYSTEM", `AI Agent connected and ready`);
+
+    // 1️⃣ Show startup info
+    // showStartupInfo().then(async () => {
+    async () => {
+      // 2️⃣ Get initial current directory after startup info
+      const initialOutput = await runLocalCommand("");
+      const lines = initialOutput.split("\n");
+      for (const line of lines) {
+        if (line.startsWith("CurntDIR=") || line.startsWith("_CURRENT_DIR:")) {
+          currentDir = line.replace("CurntDIR=", "").replace("_CURRENT_DIR:", "").trim();
+          break;
+        }
+      }
+      // appendLine("PROMPT", `${currentDir} $`);
+    };
+  };
+
+
+
+
+  socket.onmessage = async (ev: MessageEvent) => {
+    const raw = typeof ev.data === "string" ? ev.data : String(ev.data);
+
+    // handle terminal end sentinel separately
+    const endProbe = tryParseJSON(raw);
+    if (endProbe && endProbe.__END__ === "__END__") {
+      appendLine("SYSTEM", "Workflow complete.");
+      lockSend(false); // unlock UI
+      currentExecutingStepId = null;
+      return;
+    }
+
+    const msg = tryParseJSON(raw);
+    if (!msg) { appendLine("AGENT", raw); return; }
+
+    const type = msg.type ?? "UNKNOWN";
+    const stepId = msg.step_id ?? null;
+    const requestId = msg.request_id ?? null;
+    const data = msg.data ?? {};
+
+    // keep request id
+    // if (requestId && !currentRequestId) 
+    currentRequestId = requestId;
+
+    // 2) PLAN_START → show planning spinner
+    if (type === "PLAN_START") {
+      planningSpinnerEl = makeSpinner("Analyzing request and creating execution plan...");
+      terminalEl.appendChild(planningSpinnerEl);
+      terminalEl.scrollTop = terminalEl.scrollHeight;
+      return;
+    }
+
+    // 3) PLAN_STEPS → complete planning spinner; print steps as "step_id: description"
+    if (type === "PLAN_STEPS") {
+      completeSpinner(planningSpinnerEl, "Plan created successfully");
+      const steps = (data.steps ?? []) as Array<{ step_id: string; description: string }>;
+      appendLine("PLAN", "Execution Plan Generated");
+      for (const s of steps) {
+        // terminal list
+        appendLine("PLAN", `${s.step_id}: ${s.description}`);
+        // plan sidebar
+        const li = document.createElement("li");
+        li.textContent = `${s.step_id}: ${s.description}`;
+        li.dataset.execId = s.step_id;
+        li.className = "pending";
+        planListEl.appendChild(li);
+        pendingExecutions.set(s.step_id, li);
+      }
+      planListEl.scrollTop = planListEl.scrollHeight;
+      return;
+    }
+
+    // 4) PLAN_COMPLETE
+    if (type === "PLAN_COMPLETE") {
+      appendLine("PLAN", `Planning complete. Total steps: ${data.total_steps}`);
+      return;
+    }
+
+    // 5) EXEC_INIT
+    if (type === "EXEC_INIT") {
+      appendLine("SYSTEM", "Executing steps…");
+      return;
+    }
+
+    // 6) STEP_START → create panel, mark running
+    if (type === "STEP_START" && stepId) {
+      const desc = data.description || "";
+      const panel = getOrCreateStepPanel(requestId, stepId, desc);
+      setStepStatus(requestId, stepId, "running");
+      const li = pendingExecutions.get(stepId);
+      if (li) li.className = "running";
+      return;
+    }
+
+    // 7) STEP_REASONING → show paragraph in panel
+    if (type === "STEP_REASONING" && stepId) {
+      const panel = getOrCreateStepPanel(requestId, stepId);
+      const reason = (data.reasoning ?? data.reason ?? "").toString();
+      const block = panel.querySelector(".step-reasoning") as HTMLElement;
+      const p = document.createElement("p");
+      p.textContent = reason;
+      block.appendChild(p);
+      terminalEl.scrollTop = terminalEl.scrollHeight;
+      return;
+    }
+
+    // 8) STEP_CODE → collapsible code box (expandable)
+    if (type === "STEP_CODE" && stepId) {
+      const panel = getOrCreateStepPanel(requestId, stepId);
+      const codeWrap = panel.querySelector(".step-code-wrap") as HTMLElement;
+      codeWrap.innerHTML = "";
+      const code = (data.code ?? "").toString();
+      const { root, body } = makeCollapsible("Code to execute", code);
+      body.classList.add("collapsed"); // start collapsed
+      codeWrap.appendChild(root);
+      terminalEl.scrollTop = terminalEl.scrollHeight;
+      return;
+    }
+
+    // 8.5) In case the backend sends STEP_EXECUTION_RESULT (optional display)
+    if (type === "STEP_EXECUTION_RESULT" && stepId) {
+      const panel = getOrCreateStepPanel(requestId, stepId);
+      const outPre = panel.querySelector(`pre.code[data-step-output="${requestId}:${stepId}"]`) as HTMLPreElement | null;
+      if (outPre) {
+        const out = (data.output ?? "").toString();
+        outPre.textContent += (outPre.textContent ? "\n" : "") + out;
+      }
+      return;
+    }
+
+    // 9) STEP_EXECUTION_REQUEST → auto run, stream output, send result
+    if (type === "STEP_EXECUTION_REQUEST" && stepId) {
+      currentExecutingStepId = stepId;
+      const li = pendingExecutions.get(stepId);
+      if (li) li.className = "running";
+
+      const panel = getOrCreateStepPanel(requestId, stepId);
+      const outPre = panel.querySelector(`pre.code[data-step-output="${requestId}:${stepId}"]`) as HTMLPreElement | null;
+
+      const code = (data.code ?? "").toString();
+
+      try {
+        const output = await runLocalCommand(code);
+
+        // Split output into lines
+        const lines = output.split("\n");
+
+        // Remove the last two lines if they match the patterns we expect
+        while (lines.length) {
+          const lastLine = lines[lines.length - 1]?.trim() ?? "";
+          if (lastLine === "PROMPT_#END#") {
+            lines.pop();
+          } else if (lastLine.startsWith("_CURRENT_DIR:")) {
+            currentDir = lastLine.replace("_CURRENT_DIR:", "").trim(); // save current dir
+            lines.pop();
+          } else {
+            break;
+          }
+        }
+
+
+        const cleaned = lines.join("\n").trim();
+
+        // const cleaned = output.replace("PROMPT_#END#", "").trim();
+        const success = !output.includes("[ERROR: Command timed out");
+
+        // also append the final output into the step output box if exists
+        if (outPre) {
+          outPre.textContent += (outPre.textContent ? "\n" : "");
+        }
+
+        const resultMsg = {
+          type: "EXECUTE_CODE_RESULT",
+          code,
+          output: cleaned,
+          success,
+          request_id: requestId,
+          step_id: stepId
+        };
+        socket?.send(JSON.stringify(resultMsg));
+
+        appendLine("EXEC", `Step ${stepId} completed successfully`);
+
+        if (li) {
+          li.className = success ? "done" : "failed";
+          li.textContent = `${success ? "✔" : "✖"} ${li.textContent}`;
+          if (success) pendingExecutions.delete(stepId);
+        }
+      } catch (err) {
+        const errStr = err instanceof Error ? err.message : String(err);
+        appendLine("ERROR", `Execution failed for step ${stepId}: ${errStr}`);
+        const resultMsg = {
+          type: "EXECUTE_CODE_RESULT",
+          code,
+          output: errStr,
+          success: false,
+          request_id: requestId,
+          step_id: stepId
+        };
+        socket?.send(JSON.stringify(resultMsg));
+
+        if (li) {
+          li.className = "failed";
+          li.textContent = `✖ ${li.textContent}`;
+        }
+      } finally {
+        currentExecutingStepId = null;
+      }
+      return;
+    }
+
+    // 10) STEP_SUCCESS / STEP_FAIL (note: you might sometimes send fields outside data)
+    if (type === "STEP_SUCCESS" || type === "STEP_FAIL") {
+      const isSuccess = type === "STEP_SUCCESS";
+      const message = (data.message ?? msg.message ?? (isSuccess ? "Step succeeded." : "Step failed.")).toString();
+      const reasonOrOut = (data.reason ?? msg.reason ?? data.output ?? msg.output ?? "").toString();
+
+      if (stepId) {
+        setStepStatus(requestId, stepId, isSuccess ? "success" : "failed");
+        const li = pendingExecutions.get(stepId);
+        if (li) {
+          li.className = isSuccess ? "done" : "failed";
+          li.textContent = `${isSuccess ? "✔" : "✖"} ${li.textContent}`;
+          pendingExecutions.delete(stepId);
+        }
+      }
+
+      appendLine(isSuccess ? "SUCCESS" : "ERROR", message);
+      return;
+    }
+
+    // 10.2) DEBUG_* cycle
+    if (type === "DEBUG_START" && stepId) {
+      const attempt = data.attempt ?? 1;
+      const max = data.max_attempts ?? 2;
+      appendLine("DEBUG", `Debugging step ${stepId} (attempt ${attempt}/${max})`);
+      setStepStatus(requestId, stepId, "running");
+      return;
+    }
+
+    if (type === "DEBUG_REASONING" && stepId) {
+      const reason = (data.reasoning ?? "").toString();
+      const panel = getOrCreateStepPanel(requestId, stepId);
+      const p = document.createElement("p");
+      p.className = "debug-reason";
+      p.textContent = `Debug: ${reason}`;
+      panel.querySelector(".step-reasoning")?.appendChild(p);
+      return;
+    }
+
+    if (type === "DEBUG_CODE" && stepId) {
+      const code = (data.code ?? "").toString();
+      const panel = getOrCreateStepPanel(requestId, stepId);
+      const wrap = panel.querySelector(".step-code-wrap") as HTMLElement;
+      // append another collapsible for debug fix
+      const { root } = makeCollapsible("Debug code (click to expand/collapse)", code);
+      wrap.appendChild(root);
+      return;
+    }
+
+    if ((type === "DEBUG_SUCCESS" || type === "DEBUG_FAIL" || type === "DEBUG_ABORT") && stepId) {
+      if (type === "DEBUG_SUCCESS") setStepStatus(requestId, stepId, "success");
+      if (type === "DEBUG_FAIL" || type === "DEBUG_ABORT") setStepStatus(requestId, stepId, "failed");
+      appendLine("DEBUG", `${type}: ${JSON.stringify(data)}`);
+      const li = pendingExecutions.get(stepId);
+      if (li) {
+        if (type === "DEBUG_SUCCESS") {
+          li.className = "done";
+          li.textContent = `✔ ${li.textContent}`;
+        } else {
+          li.className = "failed";
+          li.textContent = `✖ ${li.textContent}`;
+        }
+        pendingExecutions.delete(stepId);
+      }
+      return;
+    }
+
+    // 11) SUMMARY_START → spinner
+    if (type === "SUMMARY_START") {
+      summarySpinnerEl = makeSpinner("Generating summary...");
+      terminalEl.appendChild(summarySpinnerEl);
+      terminalEl.scrollTop = terminalEl.scrollHeight;
+      return;
+    }
+
+    // 12) SUMMARY_REPORT → render key_results (and anything else you want)
+    if (type === "SUMMARY_REPORT") {
+      completeSpinner(summarySpinnerEl, "Summary ready");
+      appendLine("SUMMARY", "Key Results:");
+      const keyResults = (data.key_results ?? []) as string[];
+      for (const k of keyResults) appendLine("SUMMARY", `• ${k}`);
+      return;
+    }
+
+    // 13) REQUEST_COMPLETE → stop summary loading
+    if (type === "REQUEST_COMPLETE") {
+      completeSpinner(summarySpinnerEl, "Finished");
+      return;
+    }
+
+    // default: dump
+    // appendLine("AGENT", JSON.stringify(msg, null, 2));
+  };
+
+  socket.onerror = (e) => {
+    appendLine("ERROR", `WebSocket error: ${String(e)}`);
+    statusEl.textContent = "WebSocket error - Check if AI agent server is running";
+    lockSend(false);
+  };
+
+  socket.onclose = (ev) => {
+    appendLine("SYSTEM", `Connection closed: ${ev.reason || "Disconnected from AI agent"}`);
+    statusEl.textContent = "Disconnected - Click connect to retry";
+    lockSend(false);
+  };
+}
+
+// ---- UI actions ----
+sendBtn.addEventListener("click", () => {
+  const text = commandInput.value.trim();
+  if (!text) return;
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    appendLine("ERROR", "WebSocket is not connected to AI agent.");
+    return;
+  }
+
+  const text_fix = ">> " + text;
+  appendLine("USER", text_fix);
+  socket.send(text);
+  commandInput.value = "";
+  lockSend(true);
+});
+
+commandInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendBtn.click();
+});
+
+clearBtn.addEventListener("click", () => {
+  terminalEl.innerHTML = "";
+  planListEl.innerHTML = "";
+  pendingExecutions.clear();
+  stepPanels.clear();
+  planningSpinnerEl = null;
+  summarySpinnerEl = null;
+  appendLine("SYSTEM", "Terminal and plan cleared.");
+});
+
+// ---- stream CLI output (route also into current step panel if set) ----
+const w = window as any;
+if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput === "function") {
+  w.appAPI.terminal.onStreamOutput((data: { text: string; isError: boolean }) => {
+    if (currentRequestId && currentExecutingStepId) {
+      const panel = stepPanels.get(currentRequestId)?.get(currentExecutingStepId);
+      const outPre = panel?.querySelector(
+        `pre.code[data-step-output="${currentRequestId}:${currentExecutingStepId}"]`
+      ) as HTMLPreElement | null;
+
+
+      if (outPre) {
+        const lines = data.text.split("\n");
+ 
+
+
+        // Remove any trailing lines that are PROMPT_#END# or _CURRENT_DIR:<dir>
+        while (lines.length) {
+          const lastLine = lines[lines.length - 1];
+          const last = lastLine !== undefined ? lastLine.trim() : "";
+          // console.log("*******************************")
+          // console.log(last)
+
+          if (last === "PROMPT_#END#") {
+            lines.pop();
+          } else if (last.startsWith("_CURRENT_DIR:")) {
+            currentDir = last.replace("_CURRENT_DIR:", "").trim(); // save current dir
+            lines.pop();
+          } else if (last === "") {
+            lines.pop();
+          } else {
+            break;
+          }
+
+          // console.log("*******************************")
+
+        }
+
+
+        outPre.textContent += lines.join("\n");
+      }
+
+    }
+  });
+}
+
+// Add connection retry button
+const connectBtn = document.getElementById("connectBtn") as HTMLButtonElement;
+connectBtn?.addEventListener("click", () => {
+  if (socket && socket.readyState !== WebSocket.CLOSED) {
+    socket.close();
+  }
+  connectWs(WS_URL);
+});
+
+// ---- start ----
+connectWs(WS_URL); 
+
+preload.ts
+// preload.ts
+import { contextBridge, ipcRenderer } from 'electron';
+
+interface TerminalAPI {
+  runCommand: (cmd: string) => Promise<string>;
+  onStreamOutput: (callback: (data: { text: string; isError: boolean }) => void) => void;
+}
+
+contextBridge.exposeInMainWorld("appAPI", {
+  terminal: <TerminalAPI>{
+    runCommand: (cmd: string) => ipcRenderer.invoke('run-command', cmd),
+    onStreamOutput: (callback: (data: { text: string; isError: boolean }) => void) => {
+      ipcRenderer.on('stream-output', (event, data) => callback(data));
+    }
+  },
+});
+
+global.d.ts
+// First, declare the types for the custom 'versions' object
+interface Versions {
+  chrome: () => string;
+  node: () => string;
+  electron: () => string;
+  ping: () => Promise<string>;
+}
+
+interface TerminalAPI {
+  runCommand: (cmd: string) => Promise<string>;
+}
+
+// The combined API exposed by preload
+interface AppAPI {
+  versions: VersionsAPI;
+  terminal: TerminalAPI;
+}
+
+// Extend global Window interface
+declare global {
+  interface Window {
+    appAPI: AppAPI;
+  }
+}
+
+export {};
+
+
+package.json
+{
+  "name": "elec_test4",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && cp src/index.html dist/",
+    "watch": "tsc -w",
+    "dev": "concurrently \"npm run watch\" \"npm run electron\"",
+    "electron": "electronmon ./dist/main.js",
+    "start": "electron ./dist/main.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "commonjs",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^37.3.1",
+    "xterm": "^5.3.0"
+  },
+  "devDependencies": {
+    "@electron/remote": "^2.1.3",
+    "@types/node": "^24.3.0",
+    "@types/xterm": "^3.0.0",
+    "concurrently": "^9.2.1",
+    "electron-rebuild": "^3.2.9",
+    "electronmon": "^2.0.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}
+
+tsconfig.json
+{
+  "compilerOptions": {
+    // File Layout
+    "rootDir": "src",
+    "outDir": "dist",
+
+    // Environment Settings
+    "target": "ES2020",
+    "module": "CommonJS",                 // ✅ fixed spelling & casing
+    "moduleResolution": "Node",           // ✅ resolve modules like Node.js
+    "lib": ["DOM","ES2020"],                    // ✅ modern JS features
+    "types": ["node"],                    // ✅ include Node types
+
+    // Other Outputs
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    // Strict Typechecking
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    // Style / Safety (optional toggles)
+    // "noImplicitReturns": true,
+    // "noUnusedLocals": true,
+    // "noUnusedParameters": true,
+
+    // Module Interop
+    "esModuleInterop": true,              // ✅ allows default import from CJS
+    "skipLibCheck": true,
+
+    // Removed options causing your error:
+    // "isolatedModules": true,
+    // "verbatimModuleSyntax": false,
+    // "noUncheckedSideEffectImports": true,
+    // "moduleDetection": "force"
+  }
+}
+
+and this is what ws send we connect with it
+
+wscat -c https://a5641f415564.ngrok-free.app/ws
+Connected (press CTRL+C to quit)
+> pwd then ls then again pwd
+< {"type": "REQUEST_START", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:55:24.790026Z", "data": {"user_request": "pwd then ls then again pwd"}}
+< {"type": "PLAN_START", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:55:24.790281Z", "data": {"message": "Loading Planning agent request..."}}
+< {"type": "PLAN_STEPS", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:55:30.021525Z", "data": {"steps": [{"step_id": "1", "description": "Display the name of the current working directory."}, {"step_id": "2", "description": "List the contents of the current working directory."}, {"step_id": "3", "description": "Display the name of the current working directory again."}]}}
+< {"type": "PLAN_COMPLETE", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:55:30.021947Z", "data": {"total_steps": 3}}
+< {"type": "EXEC_INIT", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:55:30.022073Z", "data": {"message": "==================Executing steps====================="}}
+< {"type": "STEP_START", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:55:30.022179Z", "data": {"description": "Display the name of the current working directory."}, "step_id": "1"}
+< {"type": "STEP_REASONING", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:55:31.931819Z", "data": {"reasoning": "The 'pwd' command (print working directory) is used to display the absolute path of the current working directory."}, "step_id": "1"}
+< {"type": "STEP_CODE", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:55:31.932080Z", "data": {"language": "bash", "code": "pwd"}, "step_id": "1"}
+< {"type": "STEP_EXECUTION_REQUEST", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:55:31.932233Z", "data": {"instructions": "Please execute the code and send back the output and success status.", "code": "pwd"}, "step_id": "1"}
+> /home/dinith/destop
+< {"type": "STEP_SUCCESS", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:55:50.975203Z", "data": {"message": "The output is a single line, an absolute path, and starts with '/'.", "output": "/home/dinith/destop"}, "step_id": "1"}
+< {"type": "STEP_START", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:55:50.975327Z", "data": {"description": "List the contents of the current working directory."}, "step_id": "2"}
+< {"type": "STEP_REASONING", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:55:53.631700Z", "data": {"reasoning": "The 'ls' command is used to list the contents of the current working directory."}, "step_id": "2"}
+< {"type": "STEP_CODE", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:55:53.631982Z", "data": {"language": "bash", "code": "ls"}, "step_id": "2"}
+< {"type": "STEP_EXECUTION_REQUEST", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:55:53.632142Z", "data": {"instructions": "Please execute the code and send back the output and success status.", "code": "ls"}, "step_id": "2"}
+> fileone.txt
+< {"type": "STEP_SUCCESS", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:56:28.569133Z", "data": {"message": "The input 'fileone.txt' is a single file name, which conforms to the rule of displaying names of files and/or directories.", "output": "fileone.txt"}, "step_id": "2"}
+< {"type": "STEP_START", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:56:28.569426Z", "data": {"description": "Display the name of the current working directory again."}, "step_id": "3"}
+< {"type": "STEP_REASONING", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:56:30.296602Z", "data": {"reasoning": "The 'pwd' command displays the absolute path of the current working directory, fulfilling the step's requirement."}, "step_id": "3"}
+< {"type": "STEP_CODE", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:56:30.296891Z", "data": {"language": "bash", "code": "pwd"}, "step_id": "3"}
+< {"type": "STEP_EXECUTION_REQUEST", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:56:30.297005Z", "data": {"instructions": "Please execute the code and send back the output and success status.", "code": "pwd"}, "step_id": "3"}
+> /home/dinith/destop
+< {"type": "STEP_SUCCESS", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:56:48.637776Z", "data": {"message": "The output is a single line showing an absolute path, which is consistent with a 'pwd' command output.", "output": "/home/dinith/destop"}, "step_id": "3"}
+< {"type": "SUMMARY_START", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:56:48.638095Z", "data": {"message": "Loading summary report..."}}
+< {"type": "SUMMARY_REPORT", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:56:52.308600Z", "data": {"original_request": "pwd then ls then again pwd", "steps_completed": [{"step": 1, "description": "Display the name of the current working directory.", "outcome": "Current directory is /home/dinith/destop."}, {"step": 2, "description": "List the contents of the current working directory.", "outcome": "Contents listed: fileone.txt."}, {"step": 3, "description": "Display the name of the current working directory again.", "outcome": "Current directory is /home/dinith/destop."}], "key_results": ["The initial working directory was /home/dinith/destop.", "The directory contained 'fileone.txt'.", "The working directory remained /home/dinith/destop throughout the execution."], "final_outcome": "success", "warnings": ["The directory path '/home/dinith/destop' might be a typo for '/home/dinith/desktop'."]}}
+< {"type": "REQUEST_COMPLETE", "request_id": "req-8da344c2", "timestamp": "2025-09-05T07:56:52.308960Z", "data": {"status": "finished"}}
+< {"__END__": "__END__"}
+> 
 
-Step execution locks user input until finished
-
-Update plan sidebar status (running → success/failure)
-
-Show checkmark/cross icons on step completion
-
-7️⃣ Summary
-
-After all steps:
-
-Spinner for generating summary
-
-Display key results nicely formatted
-
-Collapsible if too long
-
-Smooth animation into terminal
-
-Clearly separated from steps and previous requests
-
-8️⃣ Terminal Utilities & Extras
-
-Clear button clears terminal and plan panel while maintaining smooth UX
-
-Support multiple user requests sequentially, visually separated
-
-Settings icon allows:
-
-Dark/light mode toggle
-
-Font size & spacing adjustments
-
-Optional icons for collapsible sections (arrow chevron, plus/minus, etc.)
-
-9️⃣ Animations & UX Enhancements
-
-Typewriter effect for:
-
-Fastfetch/system info
-
-AI reasoning output
-
-Code output streaming
-
-Spinner animations for:
-
-Planning, step execution, summary generation
-
-Smooth fade-in / slide-in effects for:
-
-New request, new steps, collapsible code/output boxes
-
-Highlight currently executing step in both sidebar & terminal panel
-
-Transitions for expand/collapse actions
-
-🔟 Additional UX Ideas
-
-Hover effects on steps in sidebar to preview reasoning/code
-
-Optional search/filter in plan sidebar
-
-Timestamps for each step/output
-
-Support rich terminal output (colored text, icons, warnings/errors)
-
-Persistent history of previous requests
-
-Smooth scroll-to-latest with animation
-
-Custom fonts & ligatures for code readability
-
-Optional background blur behind collapsible panels for depth
-
-1️⃣1️⃣ Additional Startup & Directory Requirements
-
-Fastfetch/System Info Display Fix:
-
-Correctly formatted on startup (no jumbled lines)
-
-Animated/typewriter display for readability
-
-Current Directory Display Fix:
-
-Show in prompt line at all times
-
-Updates dynamically if commands change directory
-
-Mimics real terminal prompt /home/user/projects $, not raw command output
-
-✅ Goal Summary:
-The app should feel like a modern, highly interactive terminal with AI-powered planning & execution. Smooth animations, visually appealing design, clear separation of requests, live streaming outputs, collapsible code/output panels, and proper handling of startup info and current directory are critical. UX should be intuitive, polished, and futuristic.
-
-for this i have renderer.ts, main.ts, preload.ts, you can use them to get idea what i am tring to do. and main, preload logic are coorect, render also have more good logic, so be carefull when change in files

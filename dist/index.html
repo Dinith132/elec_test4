@@ -1,71 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Terminal Agent</title>
-    <link rel="stylesheet" href="../assets/ds.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Futuristic AI Terminal</title>
+  <link rel="stylesheet" href="../assets/style.css">
 </head>
+
 <body>
-    <div class="app-container">
-        <!-- Header -->
-        <div class="header">
-            <div class="header-left">
-                <div class="app-title">
-                    <span class="ai-icon">🤖</span>
-                    <span class="title-text">AI Terminal Agent</span>
-                </div>
-                <div id="status" class="status">Initializing...</div>
-            </div>
-            <div class="header-right">
-                <button id="connectBtn" class="connect-btn">Reconnect</button>
-                <button id="clearBtn" class="clear-btn">Clear</button>
-            </div>
-        </div>
+  <!-- Custom macOS-style title bar -->
+  <div class="title-bar">
+    <div class="title-bar-controls">
+      <div class="control-button close"></div>
+      <div class="control-button minimize"></div>
+      <div class="control-button maximize"></div>
+    </div>
+    <div class="title-bar-title">AI Terminal</div>
+    <div class="title-bar-actions">
+      <button id="settingsBtn" class="icon-btn" title="Settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 -1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+          </path>
+        </svg>
+      </button>
+    </div>
+  </div>
 
-        <!-- Main content -->
-        <div class="main-content">
-            <!-- Left panel: terminal -->
-            <div class="terminal-panel">
-                <div class="terminal-header">
-                    <span class="terminal-title">Terminal Output</span>
-                    <div class="terminal-controls">
-                        <span class="control-dot red"></span>
-                        <span class="control-dot yellow"></span>
-                        <span class="control-dot green"></span>
-                    </div>
-                </div>
-                <div id="terminal" class="terminal-content"></div>
-            </div>
-
-            <!-- Right panel: execution plan -->
-            <div class="plan-panel">
-                <div class="plan-header">
-                    <span class="plan-title">Execution Plan</span>
-                </div>
-                <div class="plan-content">
-                    <ul id="plan-list" class="plan-list"></ul>
-                </div>
-            </div>
+  <div class="app-container">
+    <!-- Main terminal area -->
+    <div class="terminal-container">
+      <!-- Status bar -->
+      <div class="status-bar">
+        <div class="status-left">
+          <div class="status-item">
+            <span class="status-dot connected"></span>
+            <span id="status">Initializing...</span>
+          </div>
         </div>
+        <div class="status-right">
+<button id="clearBtn" class="btn-danger">
+  <svg id="clearIcon" width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
+    <!-- Bin body -->
+    <rect x="16" y="20" width="32" height="32" rx="2" ry="2" fill="none" stroke="currentColor"/>
+    <!-- Lid -->
+    <rect id="binLid" x="12" y="16" width="40" height="6" rx="1" ry="1" fill="none" stroke="currentColor"/>
+    <!-- Debris lines -->
+    <line class="debris" x1="24" y1="20" x2="24" y2="10" stroke="currentColor" stroke-width="2" />
+    <line class="debris" x1="32" y1="20" x2="32" y2="8" stroke="currentColor" stroke-width="2" />
+    <line class="debris" x1="40" y1="20" x2="40" y2="12" stroke="currentColor" stroke-width="2" />
+  </svg>
+</button>
 
-        <!-- Input panel -->
-        <div class="input-panel">
-            <div class="input-container">
-                <input 
-                    id="commandInput" 
-                    type="text" 
-                    placeholder="Ask the AI agent to help you with any task..."
-                    class="command-input"
-                >
-                <button id="sendBtn" class="send-btn">
-                    <span class="send-icon">→</span>
-                    Send
-                </button>
-            </div>
+
+
+
+<button id="connectBtn" class="btn-secondary">
+  <svg id="reconnectIcon" width="16" height="16" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
+    <!-- Circular arrow -->
+    <path class="arrow" d="M32 8a24 24 0 1 1-17 41" stroke-linecap="round" />
+    <polyline class="arrowhead" points="32,8 32,16 40,16" />
+  </svg>
+
+</button>
+
+
+
+
         </div>
+      </div>
+
+      <!-- Terminal output -->
+      <div class="terminal-wrapper">
+        <div id="terminal" class="terminal"></div>
+
+        <!-- Command input area -->
+        <div class="input-area">
+          <div class="prompt">
+            <span id="promptPath" class="prompt-path"></span>
+            <span class="prompt-symbol">$</span>
+          </div>
+          <textarea id="commandInput" class="command-input" placeholder="Enter your command or request..."
+            autocomplete="on" spellcheck="false" rows="1"></textarea>
+
+          <button id="sendBtn" class="send-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <script src="renderer.js"></script>
+    <!-- Plan sidebar -->
+    <div class="sidebar collapsed" id="sidebar">
+      <div class="sidebar-header">
+        <h3>Execution Plan</h3>
+        <button id="sidebarToggle" class="icon-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15,18 9,12 15,6"></polyline>
+          </svg>
+        </button>
+      </div>
+      <div class="sidebar-content">
+        <ul id="plan-list" class="plan-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button id="closeSettings" class="icon-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-item">
+          <label>Theme</label>
+          <select id="themeSelect">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <label>Font Size</label>
+          <input type="range" id="fontSizeSlider" min="12" max="18" value="14">
+          <span id="fontSizeValue">14px</span>
+        </div>
+        <div class="setting-item">
+          <label>Transparency</label>
+          <input type="range" id="transparencySlider" min="70" max="100" value="85">
+          <span id="transparencyValue">85%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
 </body>
+
 </html>

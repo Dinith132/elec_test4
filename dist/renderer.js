@@ -1,12 +1,27 @@
 "use strict";
 // renderer.ts
-const WS_URL = "ws://localhost:8000/ws";
+const WS_URL = "ws://localhost:8000/ws ";
 const statusEl = document.getElementById("status");
 const commandInput = document.getElementById("commandInput");
 const sendBtn = document.getElementById("sendBtn");
 const clearBtn = document.getElementById("clearBtn");
 const terminalEl = document.getElementById("terminal");
 const planListEl = document.getElementById("plan-list");
+const promptPathEl = document.getElementById("promptPath");
+const sidebarToggle = document.getElementById("sidebarToggle");
+const sidebar = document.getElementById("sidebar");
+const closeBtn = document.querySelector(".control-button.close");
+const minBtn = document.querySelector(".control-button.minimize");
+const maxBtn = document.querySelector(".control-button.maximize");
+// Settings modal elements
+const settingsBtn = document.getElementById("settingsBtn");
+const settingsModal = document.getElementById("settingsModal");
+const closeSettings = document.getElementById("closeSettings");
+const themeSelect = document.getElementById("themeSelect");
+const fontSizeSlider = document.getElementById("fontSizeSlider");
+const fontSizeValue = document.getElementById("fontSizeValue");
+const transparencySlider = document.getElementById("transparencySlider");
+const transparencyValue = document.getElementById("transparencyValue");
 // ---- state ----
 let socket = null;
 let currentRequestId = null;
@@ -20,32 +35,74 @@ let summarySpinnerEl = null;
 function lockSend(lock) {
     sendBtn.disabled = lock;
     commandInput.disabled = lock;
+    // Update send button visual state
+    if (lock) {
+        sendBtn.style.opacity = '0.5';
+        sendBtn.style.cursor = 'not-allowed';
+    }
+    else {
+        sendBtn.style.opacity = '1';
+        sendBtn.style.cursor = 'pointer';
+    }
+}
+function updatePrompt() {
+    if (promptPathEl && currentDir) {
+        // Show just the directory name for cleaner UI
+        const dirName = currentDir.split('/').pop() || currentDir;
+        promptPathEl.textContent = currentDir;
+    }
 }
 function appendLine(kind, text, codeBlock) {
     if (typeof text === "string" && text.includes("PROMPT_#END#"))
         return;
     const line = document.createElement("div");
-    line.className = "line";
+    line.className = `line ${kind.toLowerCase()}`;
     const time = new Date().toLocaleTimeString();
     const meta = document.createElement("span");
     meta.className = "meta";
     meta.textContent = `[${time}] `;
-    // line.appendChild(meta);
     const tag = document.createElement("span");
     tag.textContent = `[${kind}] `;
     tag.className = kind.toLowerCase();
-    // line.appendChild(tag);
     const content = document.createElement("span");
     content.textContent = text;
+    // line.appendChild(meta);
+    // line.appendChild(tag);
     line.appendChild(content);
-    // if (codeBlock) {
-    //   const code = document.createElement("pre");
-    //   code.className = "code";
-    //   code.textContent = codeBlock;
-    //   line.appendChild(code);
-    // }
+    if (codeBlock) {
+        const code = document.createElement("pre");
+        code.className = "code";
+        code.textContent = codeBlock;
+        line.appendChild(code);
+    }
     terminalEl.appendChild(line);
     terminalEl.scrollTop = terminalEl.scrollHeight;
+}
+// Typewriter effect for system info
+function typewriterLine(kind, text, delay = 0) {
+    return new Promise(resolve => {
+        const line = document.createElement("div");
+        line.className = "line";
+        const tag = document.createElement("span");
+        tag.textContent = `[${kind}] `;
+        tag.className = kind.toLowerCase();
+        const content = document.createElement("span");
+        line.appendChild(tag);
+        line.appendChild(content);
+        terminalEl.appendChild(line);
+        let index = 0;
+        const timer = setInterval(() => {
+            if (index < text.length) {
+                content.textContent += text[index];
+                index++;
+                terminalEl.scrollTop = terminalEl.scrollHeight;
+            }
+            else {
+                clearInterval(timer);
+                resolve();
+            }
+        }, delay);
+    });
 }
 function tryParseJSON(s) {
     try {
@@ -92,7 +149,6 @@ function completeSpinner(sp, doneText) {
     const label = sp.querySelector(".spinner-text");
     if (label && doneText)
         label.textContent = ` ${doneText}`;
-    // leave it visible but show as completed
 }
 function makeCollapsible(title, code) {
     const root = document.createElement("div");
@@ -121,16 +177,13 @@ function makeCollapsible(title, code) {
     return { root, body };
 }
 function getOrCreateStepPanel(requestId, stepId, description) {
-    // Ensure requestId has its own map
     if (!stepPanels.has(requestId)) {
         stepPanels.set(requestId, new Map());
     }
     const requestPanels = stepPanels.get(requestId);
-    // Reuse existing panel if already created
     if (requestPanels.has(stepId)) {
         return requestPanels.get(stepId);
     }
-    // Create new panel
     const panel = document.createElement("div");
     panel.className = "step-panel";
     panel.dataset.stepId = stepId;
@@ -143,7 +196,6 @@ function getOrCreateStepPanel(requestId, stepId, description) {
     title.className = "step-title";
     title.textContent = `Step ${stepId}${description ? `: ${description}` : ""}`;
     const spinner = makeSpinner("Running...");
-    spinner.style.marginLeft = "8px";
     spinner.classList.add("step-spinner");
     header.appendChild(statusDot);
     header.appendChild(title);
@@ -165,10 +217,8 @@ function getOrCreateStepPanel(requestId, stepId, description) {
     body.appendChild(outputWrap);
     panel.appendChild(header);
     panel.appendChild(body);
-    // Insert into terminal (scroll to bottom)
     terminalEl.appendChild(panel);
     terminalEl.scrollTop = terminalEl.scrollHeight;
-    // Save in nested map
     requestPanels.set(stepId, panel);
     return panel;
 }
@@ -184,7 +234,7 @@ function setStepStatus(requestId, stepId, status) {
     }
     if (spinner) {
         if (status === "running" || status === "pending") {
-            spinner?.classList.remove("spinner-done");
+            spinner.classList.remove("spinner-done");
         }
         else {
             completeSpinner(spinner, status === "success" ? "Done" :
@@ -194,48 +244,82 @@ function setStepStatus(requestId, stepId, status) {
 }
 async function showStartupInfo() {
     try {
-        // Run fastfetch/neofetch or any command that prints system info
-        const output = await runLocalCommand("fastfetch"); // use --stdout for pure text
+        // appendLine("SYSTEM", "Initializing futuristic terminal...");
+        // Add a small delay for visual effect
+        await new Promise(resolve => setTimeout(resolve, 500));
+        // Run fastfetch for system info
+        const output = await runLocalCommand("fastfetch 2>/dev/null || neofetch 2>/dev/null || uname -a");
         const lines = output.split("\n");
-        // Append each line to terminal
+        // Display system info with typewriter effect
         for (const line of lines) {
-            if (line.trim())
-                appendLine("SYSTEM", line);
+            if (line.trim() && !line.includes("PROMPT_#END#") && !line.includes("_CURRENT_DIR:")) {
+                await typewriterLine("SYSTEM", line.trim(), 20);
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
         }
+        // Get initial directory
+        const dirOutput = await runLocalCommand("pwd");
+        const dirLines = dirOutput.split("\n");
+        for (const line of dirLines) {
+            if (line.trim() && !line.includes("PROMPT_#END#") && !line.startsWith("_CURRENT_DIR:")) {
+                currentDir = line.trim();
+                break;
+            }
+            if (line.startsWith("_CURRENT_DIR:")) {
+                currentDir = line.replace("_CURRENT_DIR:", "").trim();
+                break;
+            }
+        }
+        updatePrompt();
+        appendLine("SYSTEM", `Current directory: ${currentDir}`);
+        appendLine("SYSTEM", "Terminal ready for AI-powered commands");
     }
     catch (err) {
         const errStr = err instanceof Error ? err.message : String(err);
         appendLine("ERROR", `Failed to run startup info: ${errStr}`);
+        // Fallback - at least get the directory
+        try {
+            const dirOutput = await runLocalCommand("pwd");
+            const lines = dirOutput.split("\n");
+            for (const line of lines) {
+                if (line.trim() && !line.includes("PROMPT_#END#") && !line.startsWith("_CURRENT_DIR:")) {
+                    currentDir = line.trim();
+                    break;
+                }
+            }
+            updatePrompt();
+        }
+        catch {
+            currentDir = "~";
+            updatePrompt();
+        }
     }
 }
 // ---- WebSocket ----
 function connectWs(url = WS_URL) {
+    statusEl.textContent = `Connecting to AI agent...`;
     socket = new WebSocket(url);
-    statusEl.textContent = `Connecting to ${url}...`;
-    socket.onopen = () => {
-        statusEl.textContent = `Connected to agent at ${WS_URL}`;
-        appendLine("SYSTEM", `AI Agent connected and ready`);
-        // 1️⃣ Show startup info
-        showStartupInfo().then(async () => {
-            // 2️⃣ Get initial current directory after startup info
-            const initialOutput = await runLocalCommand("");
-            const lines = initialOutput.split("\n");
-            for (const line of lines) {
-                if (line.startsWith("CurntDIR=") || line.startsWith("_CURRENT_DIR:")) {
-                    currentDir = line.replace("CurntDIR=", "").replace("_CURRENT_DIR:", "").trim();
-                    break;
-                }
-            }
-            // appendLine("PROMPT", `${currentDir} $`);
-        });
+    socket.onopen = async () => {
+        statusEl.textContent = `Connected to ` + url;
+        const statusDot = document.querySelector(".status-dot");
+        if (statusDot)
+            statusDot.className = "status-dot connected";
+        const output = await runLocalCommand("pwd");
+        const lines = output.split("\n");
+        const currentDirLine = lines.find(line => line.startsWith("_CURRENT_DIR:"));
+        if (currentDirLine)
+            currentDir = currentDirLine.replace("_CURRENT_DIR:", "").trim();
+        updatePrompt();
+        // Show startup info first
+        // await showStartupInfo();
     };
     socket.onmessage = async (ev) => {
         const raw = typeof ev.data === "string" ? ev.data : String(ev.data);
-        // handle terminal end sentinel separately
+        // Handle terminal end sentinel
         const endProbe = tryParseJSON(raw);
         if (endProbe && endProbe.__END__ === "__END__") {
-            appendLine("SYSTEM", "Workflow complete.");
-            lockSend(false); // unlock UI
+            appendLine("SYSTEM", "\n");
+            lockSend(false);
             currentExecutingStepId = null;
             return;
         }
@@ -248,260 +332,253 @@ function connectWs(url = WS_URL) {
         const stepId = msg.step_id ?? null;
         const requestId = msg.request_id ?? null;
         const data = msg.data ?? {};
-        // keep request id
-        // if (requestId && !currentRequestId) 
         currentRequestId = requestId;
-        // 2) PLAN_START → show planning spinner
-        if (type === "PLAN_START") {
-            planningSpinnerEl = makeSpinner("Analyzing request and creating execution plan...");
-            terminalEl.appendChild(planningSpinnerEl);
-            terminalEl.scrollTop = terminalEl.scrollHeight;
-            return;
-        }
-        // 3) PLAN_STEPS → complete planning spinner; print steps as "step_id: description"
-        if (type === "PLAN_STEPS") {
-            completeSpinner(planningSpinnerEl, "Plan created successfully");
-            const steps = (data.steps ?? []);
-            appendLine("PLAN", "Execution Plan Generated");
-            for (const s of steps) {
-                // terminal list
-                appendLine("PLAN", `${s.step_id}: ${s.description}`);
-                // plan sidebar
-                const li = document.createElement("li");
-                li.textContent = `${s.step_id}: ${s.description}`;
-                li.dataset.execId = s.step_id;
-                li.className = "pending";
-                planListEl.appendChild(li);
-                pendingExecutions.set(s.step_id, li);
-            }
-            planListEl.scrollTop = planListEl.scrollHeight;
-            return;
-        }
-        // 4) PLAN_COMPLETE
-        if (type === "PLAN_COMPLETE") {
-            appendLine("PLAN", `Planning complete. Total steps: ${data.total_steps}`);
-            return;
-        }
-        // 5) EXEC_INIT
-        if (type === "EXEC_INIT") {
-            appendLine("SYSTEM", "Executing steps…");
-            return;
-        }
-        // 6) STEP_START → create panel, mark running
-        if (type === "STEP_START" && stepId) {
-            const desc = data.description || "";
-            const panel = getOrCreateStepPanel(requestId, stepId, desc);
-            setStepStatus(requestId, stepId, "running");
-            const li = pendingExecutions.get(stepId);
-            if (li)
-                li.className = "running";
-            return;
-        }
-        // 7) STEP_REASONING → show paragraph in panel
-        if (type === "STEP_REASONING" && stepId) {
-            const panel = getOrCreateStepPanel(requestId, stepId);
-            const reason = (data.reasoning ?? data.reason ?? "").toString();
-            const block = panel.querySelector(".step-reasoning");
-            const p = document.createElement("p");
-            p.textContent = reason;
-            block.appendChild(p);
-            terminalEl.scrollTop = terminalEl.scrollHeight;
-            return;
-        }
-        // 8) STEP_CODE → collapsible code box (expandable)
-        if (type === "STEP_CODE" && stepId) {
-            const panel = getOrCreateStepPanel(requestId, stepId);
-            const codeWrap = panel.querySelector(".step-code-wrap");
-            codeWrap.innerHTML = "";
-            const code = (data.code ?? "").toString();
-            const { root, body } = makeCollapsible("Code to execute", code);
-            body.classList.add("collapsed"); // start collapsed
-            codeWrap.appendChild(root);
-            terminalEl.scrollTop = terminalEl.scrollHeight;
-            return;
-        }
-        // 8.5) In case the backend sends STEP_EXECUTION_RESULT (optional display)
-        if (type === "STEP_EXECUTION_RESULT" && stepId) {
-            const panel = getOrCreateStepPanel(requestId, stepId);
-            const outPre = panel.querySelector(`pre.code[data-step-output="${requestId}:${stepId}"]`);
-            if (outPre) {
-                const out = (data.output ?? "").toString();
-                outPre.textContent += (outPre.textContent ? "\n" : "") + out;
-            }
-            return;
-        }
-        // 9) STEP_EXECUTION_REQUEST → auto run, stream output, send result
-        if (type === "STEP_EXECUTION_REQUEST" && stepId) {
-            currentExecutingStepId = stepId;
-            const li = pendingExecutions.get(stepId);
-            if (li)
-                li.className = "running";
-            const panel = getOrCreateStepPanel(requestId, stepId);
-            const outPre = panel.querySelector(`pre.code[data-step-output="${requestId}:${stepId}"]`);
-            const code = (data.code ?? "").toString();
-            try {
-                const output = await runLocalCommand(code);
-                // Split output into lines
-                const lines = output.split("\n");
-                // Remove the last two lines if they match the patterns we expect
-                while (lines.length) {
-                    const lastLine = lines[lines.length - 1]?.trim() ?? "";
-                    if (lastLine === "PROMPT_#END#") {
-                        lines.pop();
-                    }
-                    else if (lastLine.startsWith("_CURRENT_DIR:")) {
-                        currentDir = lastLine.replace("_CURRENT_DIR:", "").trim(); // save current dir
-                        lines.pop();
-                    }
-                    else {
-                        break;
+        // Handle different message types
+        switch (type) {
+            case "PLAN_START":
+                planningSpinnerEl = makeSpinner("Analyzing request and creating execution plan...");
+                terminalEl.appendChild(planningSpinnerEl);
+                terminalEl.scrollTop = terminalEl.scrollHeight;
+                break;
+            case "PLAN_STEPS":
+                completeSpinner(planningSpinnerEl, "Plan created successfully");
+                const steps = (data.steps ?? []);
+                appendLine("PLAN", "Execution Plan Generated");
+                for (const s of steps) {
+                    appendLine("PLAN", `${s.step_id}: ${s.description}`);
+                    const li = document.createElement("li");
+                    li.textContent = `${s.step_id}: ${s.description}`;
+                    li.dataset.execId = s.step_id;
+                    li.className = "pending";
+                    planListEl.appendChild(li);
+                    pendingExecutions.set(s.step_id, li);
+                }
+                planListEl.scrollTop = planListEl.scrollHeight;
+                break;
+            case "PLAN_COMPLETE":
+                appendLine("PLAN", `Planning complete. Total steps: ${data.total_steps}`);
+                break;
+            case "EXEC_INIT":
+                appendLine("SYSTEM", "Executing steps…");
+                break;
+            case "STEP_START":
+                if (stepId) {
+                    const desc = data.description || "";
+                    const panel = getOrCreateStepPanel(requestId, stepId, desc);
+                    setStepStatus(requestId, stepId, "running");
+                    const li = pendingExecutions.get(stepId);
+                    if (li)
+                        li.className = "running";
+                }
+                break;
+            case "STEP_REASONING":
+                if (stepId) {
+                    const panel = getOrCreateStepPanel(requestId, stepId);
+                    const reason = (data.reasoning ?? data.reason ?? "").toString();
+                    const block = panel.querySelector(".step-reasoning");
+                    const p = document.createElement("p");
+                    p.textContent = reason;
+                    block.appendChild(p);
+                    terminalEl.scrollTop = terminalEl.scrollHeight;
+                }
+                break;
+            case "STEP_CODE":
+                if (stepId) {
+                    const panel = getOrCreateStepPanel(requestId, stepId);
+                    const codeWrap = panel.querySelector(".step-code-wrap");
+                    codeWrap.innerHTML = "";
+                    const code = (data.code ?? "").toString();
+                    const { root, body } = makeCollapsible("Code to execute", code);
+                    body.classList.add("collapsed");
+                    codeWrap.appendChild(root);
+                    terminalEl.scrollTop = terminalEl.scrollHeight;
+                }
+                break;
+            case "STEP_EXECUTION_RESULT":
+                if (stepId) {
+                    const panel = getOrCreateStepPanel(requestId, stepId);
+                    const outPre = panel.querySelector(`pre.code[data-step-output="${requestId}:${stepId}"]`);
+                    if (outPre) {
+                        const out = (data.output ?? "").toString();
+                        outPre.textContent += (outPre.textContent ? "\n" : "") + out;
                     }
                 }
-                const cleaned = lines.join("\n").trim();
-                // const cleaned = output.replace("PROMPT_#END#", "").trim();
-                const success = !output.includes("[ERROR: Command timed out");
-                // also append the final output into the step output box if exists
-                if (outPre) {
-                    outPre.textContent += (outPre.textContent ? "\n" : "");
+                break;
+            case "STEP_EXECUTION_REQUEST":
+                if (stepId) {
+                    currentExecutingStepId = stepId;
+                    const li = pendingExecutions.get(stepId);
+                    if (li)
+                        li.className = "running";
+                    const panel = getOrCreateStepPanel(requestId, stepId);
+                    const outPre = panel.querySelector(`pre.code[data-step-output="${requestId}:${stepId}"]`);
+                    const code = (data.code ?? "").toString();
+                    try {
+                        const output = await runLocalCommand(code);
+                        const lines = output.split("\n");
+                        // Clean output and extract directory
+                        while (lines.length) {
+                            const lastLine = lines[lines.length - 1]?.trim() ?? "";
+                            if (lastLine === "PROMPT_#END#") {
+                                lines.pop();
+                            }
+                            else if (lastLine.startsWith("_CURRENT_DIR:")) {
+                                currentDir = lastLine.replace("_CURRENT_DIR:", "").trim();
+                                updatePrompt();
+                                lines.pop();
+                            }
+                            else {
+                                break;
+                            }
+                        }
+                        const cleaned = lines.join("\n").trim();
+                        const success = !output.includes("[ERROR: Command timed out");
+                        if (outPre && cleaned) {
+                            outPre.textContent += (outPre.textContent ? "\n" : "");
+                        }
+                        const resultMsg = {
+                            type: "EXECUTE_CODE_RESULT",
+                            code,
+                            output: cleaned,
+                            success,
+                            request_id: requestId,
+                            step_id: stepId
+                        };
+                        socket?.send(JSON.stringify(resultMsg));
+                        appendLine("EXEC", `Step ${stepId} completed successfully`);
+                        if (li) {
+                            li.className = success ? "done" : "failed";
+                            li.textContent = `${success ? "✔" : "✖"} ${li.textContent}`;
+                            if (success)
+                                pendingExecutions.delete(stepId);
+                        }
+                    }
+                    catch (err) {
+                        const errStr = err instanceof Error ? err.message : String(err);
+                        appendLine("ERROR", `Execution failed for step ${stepId}: ${errStr}`);
+                        const resultMsg = {
+                            type: "EXECUTE_CODE_RESULT",
+                            code,
+                            output: errStr,
+                            success: false,
+                            request_id: requestId,
+                            step_id: stepId
+                        };
+                        socket?.send(JSON.stringify(resultMsg));
+                        if (li) {
+                            li.className = "failed";
+                            li.textContent = `✖ ${li.textContent}`;
+                        }
+                    }
+                    finally {
+                        currentExecutingStepId = null;
+                    }
                 }
-                const resultMsg = {
-                    type: "EXECUTE_CODE_RESULT",
-                    code,
-                    output: cleaned,
-                    success,
-                    request_id: requestId,
-                    step_id: stepId
-                };
-                socket?.send(JSON.stringify(resultMsg));
-                appendLine("EXEC", `Step ${stepId} completed successfully`);
-                if (li) {
-                    li.className = success ? "done" : "failed";
-                    li.textContent = `${success ? "✔" : "✖"} ${li.textContent}`;
-                    if (success)
+                break;
+            case "STEP_SUCCESS":
+            case "STEP_FAIL":
+                const isSuccess = type === "STEP_SUCCESS";
+                const message = (data.message ?? msg.message ?? (isSuccess ? "Step succeeded." : "Step failed.")).toString();
+                if (stepId) {
+                    setStepStatus(requestId, stepId, isSuccess ? "success" : "failed");
+                    const li = pendingExecutions.get(stepId);
+                    if (li) {
+                        li.className = isSuccess ? "done" : "failed";
+                        li.textContent = `${isSuccess ? "✔" : "✖"} ${li.textContent}`;
                         pendingExecutions.delete(stepId);
+                    }
                 }
-            }
-            catch (err) {
-                const errStr = err instanceof Error ? err.message : String(err);
-                appendLine("ERROR", `Execution failed for step ${stepId}: ${errStr}`);
-                const resultMsg = {
-                    type: "EXECUTE_CODE_RESULT",
-                    code,
-                    output: errStr,
-                    success: false,
-                    request_id: requestId,
-                    step_id: stepId
-                };
-                socket?.send(JSON.stringify(resultMsg));
-                if (li) {
-                    li.className = "failed";
-                    li.textContent = `✖ ${li.textContent}`;
+                appendLine(isSuccess ? "SUCCESS" : "ERROR", message);
+                break;
+            case "DEBUG_START":
+                if (stepId) {
+                    const attempt = data.attempt ?? 1;
+                    const max = data.max_attempts ?? 2;
+                    appendLine("DEBUG", `Debugging step ${stepId} (attempt ${attempt}/${max})`);
+                    setStepStatus(requestId, stepId, "running");
                 }
-            }
-            finally {
-                currentExecutingStepId = null;
-            }
-            return;
-        }
-        // 10) STEP_SUCCESS / STEP_FAIL (note: you might sometimes send fields outside data)
-        if (type === "STEP_SUCCESS" || type === "STEP_FAIL") {
-            const isSuccess = type === "STEP_SUCCESS";
-            const message = (data.message ?? msg.message ?? (isSuccess ? "Step succeeded." : "Step failed.")).toString();
-            const reasonOrOut = (data.reason ?? msg.reason ?? data.output ?? msg.output ?? "").toString();
-            if (stepId) {
-                setStepStatus(requestId, stepId, isSuccess ? "success" : "failed");
-                const li = pendingExecutions.get(stepId);
-                if (li) {
-                    li.className = isSuccess ? "done" : "failed";
-                    li.textContent = `${isSuccess ? "✔" : "✖"} ${li.textContent}`;
-                    pendingExecutions.delete(stepId);
+                break;
+            case "DEBUG_REASONING":
+                if (stepId) {
+                    const reason = (data.reasoning ?? "").toString();
+                    const panel = getOrCreateStepPanel(requestId, stepId);
+                    const p = document.createElement("p");
+                    p.className = "debug-reason";
+                    p.textContent = `Debug: ${reason}`;
+                    panel.querySelector(".step-reasoning")?.appendChild(p);
                 }
-            }
-            appendLine(isSuccess ? "SUCCESS" : "ERROR", message);
-            return;
-        }
-        // 10.2) DEBUG_* cycle
-        if (type === "DEBUG_START" && stepId) {
-            const attempt = data.attempt ?? 1;
-            const max = data.max_attempts ?? 2;
-            appendLine("DEBUG", `Debugging step ${stepId} (attempt ${attempt}/${max})`);
-            setStepStatus(requestId, stepId, "running");
-            return;
-        }
-        if (type === "DEBUG_REASONING" && stepId) {
-            const reason = (data.reasoning ?? "").toString();
-            const panel = getOrCreateStepPanel(requestId, stepId);
-            const p = document.createElement("p");
-            p.className = "debug-reason";
-            p.textContent = `Debug: ${reason}`;
-            panel.querySelector(".step-reasoning")?.appendChild(p);
-            return;
-        }
-        if (type === "DEBUG_CODE" && stepId) {
-            const code = (data.code ?? "").toString();
-            const panel = getOrCreateStepPanel(requestId, stepId);
-            const wrap = panel.querySelector(".step-code-wrap");
-            // append another collapsible for debug fix
-            const { root } = makeCollapsible("Debug code (click to expand/collapse)", code);
-            wrap.appendChild(root);
-            return;
-        }
-        if ((type === "DEBUG_SUCCESS" || type === "DEBUG_FAIL" || type === "DEBUG_ABORT") && stepId) {
-            if (type === "DEBUG_SUCCESS")
-                setStepStatus(requestId, stepId, "success");
-            if (type === "DEBUG_FAIL" || type === "DEBUG_ABORT")
-                setStepStatus(requestId, stepId, "failed");
-            appendLine("DEBUG", `${type}: ${JSON.stringify(data)}`);
-            const li = pendingExecutions.get(stepId);
-            if (li) {
-                if (type === "DEBUG_SUCCESS") {
-                    li.className = "done";
-                    li.textContent = `✔ ${li.textContent}`;
+                break;
+            case "DEBUG_CODE":
+                if (stepId) {
+                    const code = (data.code ?? "").toString();
+                    const panel = getOrCreateStepPanel(requestId, stepId);
+                    const wrap = panel.querySelector(".step-code-wrap");
+                    const { root } = makeCollapsible("Debug code (click to expand/collapse)", code);
+                    wrap.appendChild(root);
                 }
-                else {
-                    li.className = "failed";
-                    li.textContent = `✖ ${li.textContent}`;
+                break;
+            case "DEBUG_SUCCESS":
+            case "DEBUG_FAIL":
+            case "DEBUG_ABORT":
+                if (stepId) {
+                    if (type === "DEBUG_SUCCESS")
+                        setStepStatus(requestId, stepId, "success");
+                    if (type === "DEBUG_FAIL" || type === "DEBUG_ABORT")
+                        setStepStatus(requestId, stepId, "failed");
+                    appendLine("DEBUG", `${type}: ${JSON.stringify(data)}`);
+                    const li = pendingExecutions.get(stepId);
+                    if (li) {
+                        if (type === "DEBUG_SUCCESS") {
+                            li.className = "done";
+                            li.textContent = `✔ ${li.textContent}`;
+                        }
+                        else {
+                            li.className = "failed";
+                            li.textContent = `✖ ${li.textContent}`;
+                        }
+                        pendingExecutions.delete(stepId);
+                    }
                 }
-                pendingExecutions.delete(stepId);
-            }
-            return;
+                break;
+            case "SUMMARY_START":
+                summarySpinnerEl = makeSpinner("Generating summary...");
+                terminalEl.appendChild(summarySpinnerEl);
+                terminalEl.scrollTop = terminalEl.scrollHeight;
+                break;
+            case "SUMMARY_REPORT":
+                completeSpinner(summarySpinnerEl, "Summary ready");
+                appendLine("SUMMARY", "Key Results:");
+                const keyResults = (data.key_results ?? []);
+                for (const k of keyResults) {
+                    appendLine("SUMMARY", `• ${k}`);
+                }
+                break;
+            case "REQUEST_COMPLETE":
+                completeSpinner(summarySpinnerEl, "Finished");
+                break;
+            default:
+                // appendLine("AGENT", JSON.stringify(msg, null, 2));
+                break;
         }
-        // 11) SUMMARY_START → spinner
-        if (type === "SUMMARY_START") {
-            summarySpinnerEl = makeSpinner("Generating summary...");
-            terminalEl.appendChild(summarySpinnerEl);
-            terminalEl.scrollTop = terminalEl.scrollHeight;
-            return;
-        }
-        // 12) SUMMARY_REPORT → render key_results (and anything else you want)
-        if (type === "SUMMARY_REPORT") {
-            completeSpinner(summarySpinnerEl, "Summary ready");
-            appendLine("SUMMARY", "Key Results:");
-            const keyResults = (data.key_results ?? []);
-            for (const k of keyResults)
-                appendLine("SUMMARY", `• ${k}`);
-            return;
-        }
-        // 13) REQUEST_COMPLETE → stop summary loading
-        if (type === "REQUEST_COMPLETE") {
-            completeSpinner(summarySpinnerEl, "Finished");
-            return;
-        }
-        // default: dump
-        // appendLine("AGENT", JSON.stringify(msg, null, 2));
     };
     socket.onerror = (e) => {
         appendLine("ERROR", `WebSocket error: ${String(e)}`);
         statusEl.textContent = "WebSocket error - Check if AI agent server is running";
+        const statusDot = document.querySelector(".status-dot");
+        if (statusDot)
+            statusDot.className = "status-dot disconnected";
         lockSend(false);
     };
     socket.onclose = (ev) => {
         appendLine("SYSTEM", `Connection closed: ${ev.reason || "Disconnected from AI agent"}`);
-        statusEl.textContent = "Disconnected - Click connect to retry";
+        statusEl.textContent = "Disconnected - Click reconnect to retry";
+        const statusDot = document.querySelector(".status-dot");
+        if (statusDot)
+            statusDot.className = "status-dot disconnected";
         lockSend(false);
     };
 }
-// ---- UI actions ----
+// ---- UI Event Handlers ----
 sendBtn.addEventListener("click", () => {
     const text = commandInput.value.trim();
     if (!text)
@@ -510,26 +587,116 @@ sendBtn.addEventListener("click", () => {
         appendLine("ERROR", "WebSocket is not connected to AI agent.");
         return;
     }
-    const text_fix = ">> " + text;
-    appendLine("USER", text_fix);
+    appendLine("USER", `${currentDir} : ${text}`);
     socket.send(text);
     commandInput.value = "";
     lockSend(true);
 });
+commandInput.addEventListener('input', () => {
+    commandInput.style.height = 'auto'; // reset height
+    commandInput.style.height = commandInput.scrollHeight + 'px'; // set new height
+});
 commandInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter")
+    if (e.key === "Enter") {
         sendBtn.click();
+    }
 });
 clearBtn.addEventListener("click", () => {
+    clearBtn.classList.add('clearing');
     terminalEl.innerHTML = "";
     planListEl.innerHTML = "";
     pendingExecutions.clear();
     stepPanels.clear();
     planningSpinnerEl = null;
     summarySpinnerEl = null;
-    appendLine("SYSTEM", "Terminal and plan cleared.");
+    setTimeout(() => {
+        clearBtn.classList.remove('clearing');
+    }, 300); // match animation duration
+    // appendLine("SYSTEM", "Terminal and plan cleared.");
 });
-// ---- stream CLI output (route also into current step panel if set) ----
+// Sidebar toggle
+sidebarToggle.addEventListener("click", () => {
+    sidebar.classList.toggle("collapsed");
+    const chevron = sidebarToggle.querySelector("svg");
+    if (chevron) {
+        if (sidebar.classList.contains("collapsed")) {
+            chevron.style.transform = "rotate(180deg)";
+        }
+        else {
+            chevron.style.transform = "rotate(0deg)";
+        }
+    }
+});
+// Settings modal handlers
+settingsBtn.addEventListener("click", () => {
+    settingsModal.classList.add("active");
+});
+closeSettings.addEventListener("click", () => {
+    settingsModal.classList.remove("active");
+});
+settingsModal.addEventListener("click", (e) => {
+    if (e.target === settingsModal) {
+        settingsModal.classList.remove("active");
+    }
+});
+// Theme toggle
+themeSelect.addEventListener("change", () => {
+    document.body.setAttribute("data-theme", themeSelect.value);
+    localStorage.setItem("theme", themeSelect.value);
+});
+// Font size control
+fontSizeSlider.addEventListener("input", () => {
+    const size = fontSizeSlider.value + "px";
+    document.documentElement.style.setProperty("--font-size-md", size);
+    fontSizeValue.textContent = size;
+    localStorage.setItem("fontSize", fontSizeSlider.value);
+});
+// Transparency control
+transparencySlider.addEventListener("input", () => {
+    const opacity = parseInt(transparencySlider.value) / 100;
+    document.documentElement.style.setProperty("--bg-primary", `rgba(11, 15, 25, ${opacity})`);
+    document.documentElement.style.setProperty("--bg-secondary", `rgba(15, 20, 30, ${opacity})`);
+    transparencyValue.textContent = transparencySlider.value + "%";
+    localStorage.setItem("transparency", transparencySlider.value);
+});
+closeBtn?.addEventListener("click", () => {
+    window.appAPI.windowControl("close");
+});
+minBtn?.addEventListener("click", () => {
+    window.appAPI.windowControl("minimize");
+});
+maxBtn?.addEventListener("click", () => {
+    window.appAPI.windowControl("maximize");
+});
+// Load saved settings
+function loadSettings() {
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    const savedFontSize = localStorage.getItem("fontSize") || "14";
+    const savedTransparency = localStorage.getItem("transparency") || "85";
+    themeSelect.value = savedTheme;
+    document.body.setAttribute("data-theme", savedTheme);
+    fontSizeSlider.value = savedFontSize;
+    fontSizeValue.textContent = savedFontSize + "px";
+    document.documentElement.style.setProperty("--font-size-md", savedFontSize + "px");
+    transparencySlider.value = savedTransparency;
+    transparencyValue.textContent = savedTransparency + "%";
+    const opacity = parseInt(savedTransparency) / 100;
+    document.documentElement.style.setProperty("--bg-primary", `rgba(11, 15, 25, ${opacity})`);
+    document.documentElement.style.setProperty("--bg-secondary", `rgba(15, 20, 30, ${opacity})`);
+}
+// Connection retry handler
+const connectBtn = document.getElementById("connectBtn");
+connectBtn?.addEventListener("click", () => {
+    connectBtn.classList.add('reconnecting');
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+        socket.close();
+    }
+    connectWs(WS_URL);
+    setTimeout(() => {
+        connectBtn.classList.remove('reconnecting');
+    }, 3000);
+});
+// Stream output handler
 const w = window;
 if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput === "function") {
     w.appAPI.terminal.onStreamOutput((data) => {
@@ -538,17 +705,16 @@ if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput ===
             const outPre = panel?.querySelector(`pre.code[data-step-output="${currentRequestId}:${currentExecutingStepId}"]`);
             if (outPre) {
                 const lines = data.text.split("\n");
-                // Remove any trailing lines that are PROMPT_#END# or _CURRENT_DIR:<dir>
+                // Clean output
                 while (lines.length) {
                     const lastLine = lines[lines.length - 1];
                     const last = lastLine !== undefined ? lastLine.trim() : "";
-                    // console.log("*******************************")
-                    // console.log(last)
                     if (last === "PROMPT_#END#") {
                         lines.pop();
                     }
                     else if (last.startsWith("_CURRENT_DIR:")) {
-                        currentDir = last.replace("_CURRENT_DIR:", "").trim(); // save current dir
+                        currentDir = last.replace("_CURRENT_DIR:", "").trim();
+                        updatePrompt();
                         lines.pop();
                     }
                     else if (last === "") {
@@ -557,21 +723,21 @@ if (w.appAPI && w.appAPI.terminal && typeof w.appAPI.terminal.onStreamOutput ===
                     else {
                         break;
                     }
-                    // console.log("*******************************")
                 }
-                outPre.textContent += lines.join("\n");
+                console.log("---------------------------------");
+                console.log(lines);
+                console.log("---------------------------------");
+                const cleanText = lines.join("\n");
+                console.log("cleanText----", cleanText);
+                // console.log("cleanText----",cleanText)
+                if (cleanText) {
+                    outPre.textContent += cleanText + "\n";
+                }
             }
         }
     });
 }
-// Add connection retry button
-const connectBtn = document.getElementById("connectBtn");
-connectBtn?.addEventListener("click", () => {
-    if (socket && socket.readyState !== WebSocket.CLOSED) {
-        socket.close();
-    }
-    connectWs(WS_URL);
-});
-// ---- start ----
+// Initialize
+loadSettings();
 connectWs(WS_URL);
 //# sourceMappingURL=renderer.js.map

@@ -43,6 +43,8 @@ const createWindow = () => {
     const win = new electron_1.BrowserWindow({
         width: 800,
         height: 1000,
+        frame: false,
+        titleBarStyle: 'hidden',
         transparent: true, // Enable transparency for futuristic glass effect
         backgroundColor: '#00000000', // Fully transparent base color
         webPreferences: {
@@ -112,6 +114,26 @@ const createWindow = () => {
             // Write command and ensure prompt is triggered
             shell.stdin.write(`${finalCmd}\necho _CURRENT_DIR:$PWD; echo PROMPT_#END#\n`);
         });
+    });
+    // main.ts (add this after you create BrowserWindow)
+    electron_1.ipcMain.on("window-control", (event, action) => {
+        const win = electron_1.BrowserWindow.fromWebContents(event.sender);
+        if (!win)
+            return;
+        if (action === "minimize") {
+            win.minimize();
+        }
+        else if (action === "maximize") {
+            if (win.isMaximized()) {
+                win.unmaximize();
+            }
+            else {
+                win.maximize();
+            }
+        }
+        else if (action === "close") {
+            win.close();
+        }
     });
     // Load the index.html file into the window.
     win.loadFile('index.html');
