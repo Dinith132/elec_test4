@@ -283,7 +283,7 @@ async function showStartupInfo() {
         // Add a small delay for visual effect
         await new Promise(resolve => setTimeout(resolve, 500));
         // Run fastfetch for system info
-        const x = "fastfetch";
+        const x = "screenfetch";
         const output = await runLocalCommand(x);
         const lines = output.split("\n");
         // Display system info with typewriter effect

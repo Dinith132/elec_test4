@@ -4,6 +4,7 @@ import { spawn } from 'child_process';
 import * as path from 'node:path';
 import Convert from "ansi-to-html";
 
+import AnsiUp from 'ansi-up'
 // This function creates the main browser window.
 const createWindow = (): void => {
 
@@ -12,7 +13,7 @@ const createWindow = (): void => {
   const win = new BrowserWindow({
     width: 800,
     height: 1000,
-    frame:false,
+    frame: false,
     titleBarStyle: 'hidden',
     transparent: true, // Enable transparency for futuristic glass effect
     backgroundColor: '#00000000', // Fully transparent base color
@@ -99,25 +100,35 @@ const createWindow = (): void => {
   });
 
 
-ipcMain.handle('ansi-to-html', async (event, ansiText: string) => {
-  const converter = new Convert({
-    fg: '#FFF',       // default foreground
-    bg: '#000',       // default background
-    newline: true,    // preserve newlines
-    escapeXML: true,  // escape HTML chars
-    stream: true,     // treat as stream (important!)
-    // DO NOT strip spaces
-    // 'ansi-to-html' may strip leading spaces if stream=false
-  });
+  // ipcMain.handle('ansi-to-html', async (event, ansiText: string) => {
+  //   const converter = new Convert({
+  //     fg: '#FFF',       // default foreground
+  //     bg: '#000',       // default background
+  //     newline: true,    // preserve newlines
+  //     escapeXML: true,  // escape HTML chars
+  //     stream: true,     // treat as stream (important!)
+  //     // DO NOT strip spaces
+  //     // 'ansi-to-html' may strip leading spaces if stream=false
+  //   });
 
-  console.log("Converting ANSI to HTML:", JSON.stringify(ansiText));
-  const html = converter.toHtml(ansiText);
-  console.log("Converted ANSI to HTML:", html);
+  //   console.log("Converting ANSI to HTML:", JSON.stringify(ansiText));
+  //   const html = converter.toHtml(ansiText);
+  //   console.log("Converted ANSI to HTML:", html);
 
-  return html;
-});
+  //   return html;
+  // });
 
   // main.ts (add this after you create BrowserWindow)
+
+  ipcMain.handle('ansi-to-html', async (event, ansiText: string) => {
+    const ansi_up = new AnsiUp.AnsiUp();
+
+    console.log("Converting ANSI to HTML:", JSON.stringify(ansiText));
+    const html = ansi_up.ansi_to_html(ansiText);
+    console.log("Converted ANSI to HTML:", html);
+
+    return html;
+  });
 
   ipcMain.on("window-control", (event, action) => {
     const win = BrowserWindow.fromWebContents(event.sender);

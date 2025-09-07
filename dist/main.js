@@ -40,7 +40,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const child_process_1 = require("child_process");
 const path = __importStar(require("node:path"));
-const ansi_to_html_1 = __importDefault(require("ansi-to-html"));
+const ansi_up_1 = __importDefault(require("ansi-up"));
 // This function creates the main browser window.
 const createWindow = () => {
     // Create the browser window.
@@ -116,22 +116,29 @@ const createWindow = () => {
             shell.stdin.write(`${finalCmd}\necho _CURRENT_DIR:$PWD; echo PROMPT_#END#\n`);
         });
     });
+    // ipcMain.handle('ansi-to-html', async (event, ansiText: string) => {
+    //   const converter = new Convert({
+    //     fg: '#FFF',       // default foreground
+    //     bg: '#000',       // default background
+    //     newline: true,    // preserve newlines
+    //     escapeXML: true,  // escape HTML chars
+    //     stream: true,     // treat as stream (important!)
+    //     // DO NOT strip spaces
+    //     // 'ansi-to-html' may strip leading spaces if stream=false
+    //   });
+    //   console.log("Converting ANSI to HTML:", JSON.stringify(ansiText));
+    //   const html = converter.toHtml(ansiText);
+    //   console.log("Converted ANSI to HTML:", html);
+    //   return html;
+    // });
+    // main.ts (add this after you create BrowserWindow)
     electron_1.ipcMain.handle('ansi-to-html', async (event, ansiText) => {
-        const converter = new ansi_to_html_1.default({
-            fg: '#FFF', // default foreground
-            bg: '#000', // default background
-            newline: true, // preserve newlines
-            escapeXML: true, // escape HTML chars
-            stream: true, // treat as stream (important!)
-            // DO NOT strip spaces
-            // 'ansi-to-html' may strip leading spaces if stream=false
-        });
+        const ansi_up = new ansi_up_1.default.AnsiUp();
         console.log("Converting ANSI to HTML:", JSON.stringify(ansiText));
-        const html = converter.toHtml(ansiText);
+        const html = ansi_up.ansi_to_html(ansiText);
         console.log("Converted ANSI to HTML:", html);
         return html;
     });
-    // main.ts (add this after you create BrowserWindow)
     electron_1.ipcMain.on("window-control", (event, action) => {
         const win = electron_1.BrowserWindow.fromWebContents(event.sender);
         if (!win)

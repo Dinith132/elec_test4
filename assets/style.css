@@ -322,12 +322,18 @@ body:hover {
   overflow-y: auto;
 }
 
-.line.user { color: #9cdcfe; }      /* light blue for user input */
+.line.user {
+  color: #9cdcfe;
+  font-size:14px;
+}      /* light blue for user input */
 .line.system { color: #cccccc; }    /* gray for system messages */
 .line.agent { color: #f0a500; }     /* yellow/orange for AI agent messages */
-.line.plan { color: #00ff7f; }      /* green for plan steps */
-.line.summary { color: #ff79c6; }   /* pink for summary */
+.line.plan { color: #00ff7f; 
+           font-size:13px}      /* green for plan steps */
+.line.summary { color: #ff79c6; 
+              font-size:13px}   /* pink for summary */
 .line.error { color: #ff5555; } 
+
 
 /* Terminal Lines */
 .line {
