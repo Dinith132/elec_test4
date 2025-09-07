@@ -61,7 +61,7 @@ const createWindow = () => {
         if (!userShells[senderId]) {
             userShells[senderId] = (0, child_process_1.spawn)('/bin/zsh', [], {
                 stdio: ['pipe', 'pipe', 'pipe'],
-                cwd: process.env.HOME,
+                cwd: process.cwd(),
                 env: { ...process.env, PS1: 'PROMPT_#END# ' }, // Custom prompt for detection
             });
         }

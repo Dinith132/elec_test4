@@ -55,7 +55,7 @@ function updatePrompt() {
   if (promptPathEl && currentDir) {
     // Show just the directory name for cleaner UI
     const dirName = currentDir.split('/').pop() || currentDir;
-    promptPathEl.textContent = currentDir;
+    promptPathEl.textContent = "dinith@kali:~"+currentDir;
   }
 }
 

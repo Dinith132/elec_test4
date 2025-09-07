@@ -13,13 +13,13 @@
   --bg-glass-hover: rgba(255, 255, 255, 0.06);
   
   /* Accent Colors */
-  --accent-primary: rgba(39, 44, 51, 0.8); /* Adjusted opacity for better visibility */
+  --accent-primary: rgba(39, 44, 51, 0.8);
   --accent-secondary: #7c3aed;
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-error: #ef4444;
-  --accent-system: #059669; /* New color for .system to distinguish from .success */
-  --accent-summary: #a855f7; /* New color for .summary to distinguish from .agent */
+  --accent-system: #059669;
+  --accent-summary: #a855f7;
   
   /* Text Colors */
   --text-primary: #f8fafc;
@@ -104,7 +104,6 @@ html, body {
   color: var(--text-primary);
   background: transparent;
   overflow: hidden;
-
   border-radius: 20px;
   border: 2px solid var(--border-primary);
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
@@ -137,7 +136,6 @@ body:hover {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
 }
-
 
 /* Title Bar */
 .title-bar {
@@ -256,17 +254,11 @@ body:hover {
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
 }
 
-
 .status-right {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
 }
-
-
-
-
-/* start  */
 
 /* Typewriter Panel */
 .typewriter-panel {
@@ -279,12 +271,12 @@ body:hover {
   animation: slideInUp 0.4s ease-out;
   box-shadow: var(--shadow-md);
 }
+
 #start_body {
   font-family: 'Times New Roman', Times, serif;
   white-space: pre;
-  line-height: 1.2em; 
+  line-height: 1.2em;
 }
-
 
 /* Body inside the typewriter panel */
 .typewriter-body {
@@ -298,7 +290,6 @@ body:hover {
   animation: typewriter 0.6s ease-out;
 }
 
-
 /* Terminal Wrapper */
 .terminal-wrapper {
   flex: 1;
@@ -306,9 +297,9 @@ body:hover {
   flex-direction: column;
   padding: 0;
   min-height: 0;
-  border-radius: 12px; /* single border-radius for the whole box */
-  overflow: hidden; /* ensures internal elements stay inside the rounded corners */
-  background: var(--bg-glass); /* single background for the whole terminal */
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-glass);
   border: 1px solid var(--border-glass);
 }
 
@@ -316,24 +307,18 @@ body:hover {
 .terminal {
   flex: 1;
   padding: var(--space-md);
-  border: none; /* remove inner border */
-  border-radius: 0; /* remove rounding */
-  background: transparent; /* inherit parent's bg */
+  border: none;
+  border-radius: 0;
+  background: transparent;
   overflow-y: auto;
 }
 
-.line.user {
-  color: #9cdcfe;
-  font-size:14px;
-}      /* light blue for user input */
-.line.system { color: #cccccc; }    /* gray for system messages */
-.line.agent { color: #f0a500; }     /* yellow/orange for AI agent messages */
-.line.plan { color: #00ff7f; 
-           font-size:13px}      /* green for plan steps */
-.line.summary { color: #ff79c6; 
-              font-size:13px}   /* pink for summary */
-.line.error { color: #ff5555; } 
-
+.line.user { color: #9cdcfe; font-size: 14px; }
+.line.system { color: #cccccc; }
+.line.agent { color: #f0a500; }
+.line.plan { color: #00ff7f; font-size: 13px; }
+.line.summary { color: #ff79c6; font-size: 13px; }
+.line.error { color: #ff5555; }
 
 /* Terminal Lines */
 .line {
@@ -343,17 +328,17 @@ body:hover {
 }
 
 .line .meta {
-  color: var(--text-muted); /* Changed to lighter shade for better contrast */
+  color: var(--text-muted);
   font-size: var(--font-size-sm);
 }
 
 .line .user {
-  color: var(--accent-primary); /* Now uses more vibrant rgba(0, 103, 247, 0.8) */
+  color: var(--accent-primary);
   font-weight: 500;
 }
 
 .line .system {
-  color: var(--accent-system); /* New distinct green for system messages */
+  color: var(--accent-system);
 }
 
 .line .agent {
@@ -361,30 +346,30 @@ body:hover {
 }
 
 .line .plan {
-  color: #facc15; /* Kept bright yellow, seems fitting */
+  color: #facc15;
   font-weight: 500;
 }
 
 .line .exec {
-  color: var(--text-primary); /* Kept clear off-white */
+  color: var(--text-primary);
   opacity: 0.9;
 }
 
 .line .error {
-  color: var(--accent-error); /* Kept vibrant red */
+  color: var(--accent-error);
 }
 
 .line .success {
-  color: var(--accent-success); /* Kept emerald green */
+  color: var(--accent-success);
 }
 
 .line .summary {
-  color: var(--accent-summary); /* New brighter purple for distinction */
+  color: var(--accent-summary);
   font-weight: 600;
 }
 
 .line .debug {
-  color: #f472b6; /* Kept neon pink, fits futuristic vibe */
+  color: #f472b6;
   font-style: italic;
 }
 
@@ -540,18 +525,18 @@ body:hover {
 /* Input Area */
 .input-area {
   display: flex;
-  align-items: center; /* vertically center items */
-  gap: 8px; /* optional spacing between prompt and input */
+  align-items: center;
+  gap: 8px;
   padding: var(--space-md);
   background: transparent;
 }
 
 .prompt {
   display: flex;
-  align-items: center; /* vertically align path and symbol */
-  gap: 4px; /* space between path and $ symbol */
-  white-space: nowrap; /* prevent wrapping */
-  flex-shrink: 0; /* prevent prompt from shrinking */
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .prompt-path {
@@ -571,17 +556,14 @@ body:hover {
   color: var(--text-primary);
   font-family: var(--font-mono);
   font-size: var(--font-size-md);
-  resize: none;       /* user cannot resize manually */
+  resize: none;
   overflow-wrap: break-word;
-  overflow-y: auto;   /* scroll vertically if needed */
+  overflow-y: auto;
   line-height: 1.5;
-  padding: 4px 0;     /* small padding for aesthetics */
-  min-height: 1.5em;  /* matches one line of text */
+  padding: 4px 0;
+  min-height: 1.5em;
   white-space: pre-wrap;
 }
-
-
-
 
 .command-input::placeholder {
   color: var(--text-muted);
@@ -616,7 +598,6 @@ body:hover {
   cursor: not-allowed;
   transform: none;
 }
- 
 
 /* Sidebar */
 .sidebar {
@@ -629,7 +610,6 @@ body:hover {
 
 .sidebar.collapsed {
   width: 48px;
-  /* Fix: Maintain sidebar content visibility but hide it visually */
   overflow: hidden;
 }
 
@@ -658,7 +638,6 @@ body:hover {
 }
 
 .sidebar.collapsed .sidebar-content {
-  /* Fix: Instead of display: none, use visibility and opacity to preserve structure */
   visibility: hidden;
   opacity: 0;
   width: 0;
@@ -752,9 +731,34 @@ body:hover {
   color: var(--text-muted);
   cursor: pointer;
   transition: var(--transition-fast);
-  position: relative; /* For pseudo-element positioning */
-  font-family: 'Font Awesome 6 Free';
-  font-weight: 900; /* Solid icons require this */
+  position: relative;
+}
+
+.icon-btn:hover {
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-glow);
+}
+
+/* New Icon Button Styles */
+#profileBtn:hover svg {
+  stroke: var(--accent-primary);
+  transform: scale(1.1);
+}
+
+#historyBtn:hover svg {
+  stroke: var(--accent-secondary);
+  transform: scale(1.1);
+}
+
+#saveBtn:hover svg {
+  stroke: var(--accent-success);
+  transform: scale(1.1);
+}
+
+#helpBtn:hover svg {
+  stroke: var(--accent-warning);
+  transform: scale(1.1);
 }
 
 #binLid {
@@ -776,8 +780,6 @@ body:hover {
   opacity: 1;
   transform: translateY(-20px);
 }
-
-
 
 #reconnectIcon .arrow {
   transform-origin: 32px 32px;
@@ -805,64 +807,6 @@ body:hover {
   0% { transform: scale(1); stroke-width: 2; }
   50% { transform: scale(1.3); stroke-width: 3; }
   100% { transform: scale(1); stroke-width: 2; }
-}
-
-
-
-.icon-btn:hover {
-  background: var(--bg-glass);
-  color: var(--text-secondary);
-  box-shadow: var(--shadow-glow);
-}
-
-/* Reconnect and Clear Buttons */
-.icon-btn.reconnect::before {
-  content: "\f021"; /* Font Awesome refresh icon */
-  font-size: 16px;
-  color: var(--accent-success);
-}
-
-.icon-btn.clear::before {
-  content: "\f2ed"; /* Font Awesome trash icon, fixed from incorrect \f021 */
-  font-size: 16px;
-  color: var(--accent-error);
-}
-
-
-.icon-btn.reconnect:hover::before {
-  color: var(--accent-success);
-  animation: spin 1s linear infinite;
-}
-
-.icon-btn.clear:hover::before {
-  color: #dc2626;
-  transform: scale(1.1);
-}
-
-/* Spinner */
-.spinner {
-  display: flex;
-  align-items: center;
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.spinner-dot {
-  color: rgb(178, 180, 42);
-  animation: spin 1s linear infinite;
-}
-
-.spinner-text {
-  margin-left: var(--space-xs);
-}
-
-.spinner.spinner-done .spinner-dot {
-  color: var(--accent-success);
-  animation: none;
-}
-
-.step-spinner {
-  margin-left: auto;
 }
 
 /* Modal */
@@ -957,15 +901,6 @@ body:hover {
   }
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @keyframes typewriter {
   from {
     width: 0;
@@ -1007,7 +942,6 @@ body:hover {
     border-right: none;
   }
 }
-
 
 /* High contrast mode for accessibility */
 @media (prefers-contrast: high) {
