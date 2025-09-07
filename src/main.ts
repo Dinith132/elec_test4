@@ -2,7 +2,6 @@
 import { app, BrowserWindow, ipcMain, ipcRenderer } from 'electron';
 import { spawn } from 'child_process';
 import * as path from 'node:path';
-import Convert from "ansi-to-html";
 
 import AnsiUp from 'ansi-up'
 // This function creates the main browser window.
