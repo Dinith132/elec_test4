@@ -1,11 +1,11 @@
 {
   "name": "elec_test4",
   "version": "1.0.0",
-  "description": "My Electron app",
+  "description": "Cogniterm",
   "author": "Dinith <dinitharrow132@gmail.com>",
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc && cp src/index.html dist/ && electron-builder",
+    "build": "tsc && electron-builder",
     "watch": "tsc -w",
     "dev": "concurrently \"npm run watch\" \"npm run electron\"",
     "electron": "electronmon ./dist/main.js",
@@ -34,8 +34,8 @@
     "typescript": "^5.9.2"
   },
   "build": {
-    "appId": "com.yourname.elec_test4",
-    "productName": "ElecTest",
+    "appId": "com.dinith.cogniterm",
+    "productName": "Cogniterm",
     "directories": {
       "output": "dist_build"
     },
@@ -54,3 +54,4 @@
     }
   }
 }
+

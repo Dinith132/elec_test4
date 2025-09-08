@@ -10,8 +10,13 @@ const createWindow = (): void => {
 
   // Create the browser window.
   const win = new BrowserWindow({
-    width: 800,
+    width: 900,
     height: 1000,
+    minWidth: 900,        // minimum resizable width
+    minHeight: 600,       // minimum resizable height
+    maxWidth: 1920,       // optional maximum width
+    maxHeight: 1080,      // optional maximum height
+    resizable: true,      // allow user to resize
     frame: false,
     titleBarStyle: 'hidden',
     transparent: true, // Enable transparency for futuristic glass effect
@@ -149,7 +154,8 @@ const createWindow = (): void => {
 
 
   // Load the index.html file into the window.
-  win.loadFile('index.html');
+  const indexPath = path.join(__dirname, 'index.html');
+  win.loadFile(indexPath); 
 
   // Clean up shell on window close
   win.on('closed', () => {

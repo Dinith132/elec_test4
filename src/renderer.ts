@@ -670,6 +670,7 @@ function connectWs(url = WS_URL) {
         for (const k of keyResults) {
           appendLine("SUMMARY", `• ${k}`);
         }
+        appendLine("SUMMARY",data.total_summary);
         break;
 
       case "REQUEST_COMPLETE":
